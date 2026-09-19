@@ -72,6 +72,7 @@
 
     /* Authentic Active LCD Dot-Matrix Screen (384x145 on 644x1250 skin) */
     .lcd-screen-overlay {
+      --lcd-scale: 1;
       position: absolute;
       left: 20.186%;
       top: 18.960%;
@@ -96,7 +97,7 @@
     /* Status Bar Row - Using Official Casio Bitmap Glyphs */
     .lcd-status-bar {
       height: 14%;
-      min-height: 11px;
+      min-height: calc(11px * var(--lcd-scale, 1));
       display: flex;
       justify-content: space-between;
       align-items: center;
@@ -106,9 +107,13 @@
     .status-group {
       display: flex;
       align-items: center;
-      gap: 3px;
+      gap: calc(3px * var(--lcd-scale, 1));
       height: 100%;
     }
+    .sym-s, .sym-a, .sym-m, .sym-d, .sym-r, .sym-g { width: calc(9px * var(--lcd-scale, 1)) !important; }
+    .sym-sto { width: calc(13px * var(--lcd-scale, 1)) !important; }
+    .sym-math { width: calc(19px * var(--lcd-scale, 1)) !important; }
+    .sym-up, .sym-down { width: calc(8px * var(--lcd-scale, 1)) !important; }
     .status-sym {
       display: inline-block;
       height: 90%;
@@ -137,7 +142,7 @@
     .mode-badge {
       display: none;
       font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-      font-size: 8px;
+      font-size: calc(8px * var(--lcd-scale, 1));
       font-weight: 900;
       line-height: 9px;
       height: 9px;
@@ -159,20 +164,20 @@
       overflow: hidden;
     }
     .screen-expression {
-      font-size: 13px;
+      font-size: calc(13px * var(--lcd-scale, 1));
       line-height: 1.25;
       white-space: nowrap;
       overflow-x: auto;
       overflow-y: hidden;
-      min-height: 18px;
+      min-height: calc(18px * var(--lcd-scale, 1));
       display: flex;
       align-items: center;
     }
     .screen-expression::-webkit-scrollbar { display: none; }
     .cursor {
       display: inline-block;
-      width: 4px;
-      height: 12px;
+      width: max(1.5px, calc(3px * var(--lcd-scale, 1)));
+      height: calc(12px * var(--lcd-scale, 1));
       background: var(--lcd-dark);
       animation: blink 1s step-end infinite;
       vertical-align: middle;
@@ -188,11 +193,11 @@
       display: flex;
       justify-content: flex-end;
       align-items: center;
-      font-size: 19px;
+      font-size: calc(19px * var(--lcd-scale, 1));
       font-weight: normal;
       text-align: right;
       letter-spacing: 0.5px;
-      min-height: 24px;
+      min-height: calc(24px * var(--lcd-scale, 1));
       padding-right: 2px;
       padding-bottom: 2px;
     }
@@ -231,9 +236,9 @@
     /* ─── Authentic Casio Empty Input Slot (crisp hollow rectangle) ─── */
     .empty-box {
       display: inline-block;
-      width: 8px;
-      height: 9px;
-      border: 1.3px solid var(--lcd-dark);
+      width: calc(8px * var(--lcd-scale, 1));
+      height: calc(9px * var(--lcd-scale, 1));
+      border: max(1px, calc(1.3px * var(--lcd-scale, 1))) solid var(--lcd-dark);
       background: transparent;
       vertical-align: middle;
       margin: 0 1px;
@@ -244,9 +249,9 @@
       display: inline-flex;
       align-items: center;
       justify-content: center;
-      width: 8px;
-      height: 9px;
-      border: 1.3px solid var(--lcd-dark);
+      width: calc(8px * var(--lcd-scale, 1));
+      height: calc(9px * var(--lcd-scale, 1));
+      border: max(1px, calc(1.3px * var(--lcd-scale, 1))) solid var(--lcd-dark);
       background: transparent;
       vertical-align: middle;
       margin: 0 1px;
@@ -254,8 +259,8 @@
       border-radius: 0.5px;
     }
     .empty-box-cursor .cursor {
-      height: 6px;
-      width: 1.8px;
+      height: calc(6px * var(--lcd-scale, 1));
+      width: max(1px, calc(1.8px * var(--lcd-scale, 1)));
       margin: 0;
     }
     .casio-sup .empty-box,
@@ -539,8 +544,8 @@
       position: absolute;
       top: 1px;
       right: 24%;
-      font-size: 7.5px;
-      line-height: 7.5px;
+      font-size: calc(7.5px * var(--lcd-scale, 1));
+      line-height: calc(7.5px * var(--lcd-scale, 1));
       color: var(--lcd-dark);
       pointer-events: none;
       z-index: 12;
@@ -592,9 +597,9 @@
       background: var(--lcd-dark);
       color: var(--lcd-bg);
       font-family: var(--font-lcd);
-      font-size: 8px;
-      line-height: 8px;
-      height: 9px;
+      font-size: calc(8px * var(--lcd-scale, 1));
+      line-height: calc(8px * var(--lcd-scale, 1));
+      height: calc(9px * var(--lcd-scale, 1));
       padding: 0 2px 1px 2px;
       border-top-left-radius: 2px;
       font-weight: bold;
@@ -610,9 +615,9 @@
     }
     .menu-footer-label {
       font-family: var(--font-lcd);
-      font-size: 13px;
-      line-height: 14px;
-      height: 14px;
+      font-size: calc(13px * var(--lcd-scale, 1));
+      line-height: calc(14px * var(--lcd-scale, 1));
+      height: calc(14px * var(--lcd-scale, 1));
       padding-left: 2px;
       color: var(--lcd-dark);
       letter-spacing: 0.5px;
@@ -641,8 +646,8 @@
       display: flex;
       justify-content: space-between;
       align-items: center;
-      height: 14px;
-      font-size: 12px;
+      height: calc(14px * var(--lcd-scale, 1));
+      font-size: calc(12px * var(--lcd-scale, 1));
       font-weight: bold;
       border-bottom: 1px solid var(--lcd-dark);
       padding-bottom: 1px;
@@ -656,8 +661,8 @@
       padding: 1px 0;
     }
     .list-item-row {
-      font-size: 12.5px;
-      line-height: 15px;
+      font-size: calc(12.5px * var(--lcd-scale, 1));
+      line-height: calc(15px * var(--lcd-scale, 1));
       white-space: nowrap;
       color: var(--lcd-dark);
       font-family: var(--font-lcd);
@@ -690,16 +695,16 @@
       box-sizing: border-box;
     }
     .solve-expr-line {
-      font-size: 12.5px;
-      line-height: 14px;
+      font-size: calc(12.5px * var(--lcd-scale, 1));
+      line-height: calc(14px * var(--lcd-scale, 1));
       white-space: nowrap;
       overflow: hidden;
       text-overflow: ellipsis;
-      min-height: 14px;
+      min-height: calc(14px * var(--lcd-scale, 1));
     }
     .solve-header-line {
-      font-size: 12px;
-      line-height: 14px;
+      font-size: calc(12px * var(--lcd-scale, 1));
+      line-height: calc(14px * var(--lcd-scale, 1));
       font-weight: bold;
       margin-top: 1px;
     }
@@ -707,20 +712,20 @@
       display: flex;
       justify-content: space-between;
       align-items: baseline;
-      font-size: 14px;
-      line-height: 16px;
+      font-size: calc(14px * var(--lcd-scale, 1));
+      line-height: calc(16px * var(--lcd-scale, 1));
     }
     .solve-var-label, .solve-res-label {
-      font-size: 13px;
+      font-size: calc(13px * var(--lcd-scale, 1));
       font-weight: normal;
     }
     .solve-var-val {
-      font-size: 15px;
+      font-size: calc(15px * var(--lcd-scale, 1));
       text-align: right;
       letter-spacing: 0.5px;
     }
     .solve-res-val {
-      font-size: 14px;
+      font-size: calc(14px * var(--lcd-scale, 1));
       text-align: right;
       letter-spacing: 0.5px;
     }
@@ -743,7 +748,7 @@
       border-radius: 1px;
     }
     .dialog-title {
-      font-size: 12px;
+      font-size: calc(12px * var(--lcd-scale, 1));
       font-weight: bold;
       text-align: center;
       margin-bottom: 2px;
@@ -756,11 +761,26 @@
     }
     .dialog-row {
       display: flex;
-      font-size: 11px;
-      line-height: 13px;
+      font-size: calc(11px * var(--lcd-scale, 1));
+      line-height: calc(13px * var(--lcd-scale, 1));
       justify-content: space-between;
       padding: 0 4px;
     }
+
+    /* Auto-scale all dynamic custom views inside LCD */
+    .lcd-screen-overlay [style*="font-size: 18px"] { font-size: calc(18px * var(--lcd-scale, 1)) !important; }
+    .lcd-screen-overlay [style*="font-size: 16px"] { font-size: calc(16px * var(--lcd-scale, 1)) !important; }
+    .lcd-screen-overlay [style*="font-size: 15px"] { font-size: calc(15px * var(--lcd-scale, 1)) !important; }
+    .lcd-screen-overlay [style*="font-size: 14px"] { font-size: calc(14px * var(--lcd-scale, 1)) !important; }
+    .lcd-screen-overlay [style*="font-size: 13px"] { font-size: calc(13px * var(--lcd-scale, 1)) !important; }
+    .lcd-screen-overlay [style*="font-size: 12px"] { font-size: calc(12px * var(--lcd-scale, 1)) !important; }
+    .lcd-screen-overlay [style*="font-size: 11px"] { font-size: calc(11px * var(--lcd-scale, 1)) !important; }
+    .lcd-screen-overlay [style*="font-size: 10px"] { font-size: calc(10px * var(--lcd-scale, 1)) !important; }
+    .lcd-screen-overlay [style*="font-size: 9px"] { font-size: calc(9px * var(--lcd-scale, 1)) !important; }
+    .lcd-screen-overlay [style*="font-size: 8px"] { font-size: calc(8px * var(--lcd-scale, 1)) !important; }
+    .lcd-screen-overlay [style*="height: 20px"] { height: calc(20px * var(--lcd-scale, 1)) !important; }
+    .lcd-screen-overlay [style*="min-width: 14px"] { min-width: calc(14px * var(--lcd-scale, 1)) !important; }
+    .lcd-screen-overlay [style*="margin-right: 12px"] { margin-right: calc(12px * var(--lcd-scale, 1)) !important; }
     .dialog-key {
       font-weight: bold;
     }
@@ -1165,11 +1185,15 @@
       background: var(--lcd-bg);
     }
     .popup-lcd {
+      --lcd-scale: 1 !important;
       position: absolute !important;
       left: 0 !important;
       top: 0 !important;
       width: 384px !important;
       height: 145px !important;
+    }
+    .ext-lcd-screen {
+      --lcd-scale: 1 !important;
     }
     .popup-lcd.no-grid {
       background-image: none !important;
@@ -3676,6 +3700,97 @@ class CasioApp {
         this.handleKey('DOWN');
       }
     });
+  }
+
+  // Master ON Key Handler - 100% Matching Real Casio fx-580VN X
+  handleOnKey() {
+    if (this.state.isPoweredOff) {
+      this.powerOn();
+      return;
+    }
+
+    // 1. Reset modifiers
+    this.state.shift = false;
+    this.state.alpha = false;
+    this.state.sto = false;
+    this.display.updateIndicators(this.state);
+    this.display.setScrollArrows(false, false);
+
+    // 2. Close active menus and modal overlays
+    if (this.osState === 'MENU') {
+      this.closeMenu();
+      return;
+    }
+    if (this.osState === 'SETUP') {
+      this.exitSetup();
+      return;
+    }
+    if (this.osState === 'OPTN') {
+      this.osState = 'NORMAL';
+      this.optnSubmenu = null;
+      this.display.showView('NORMAL');
+      this.renderCurrentView();
+      return;
+    }
+    if (this.osState.startsWith('CONST_') || this.osState.startsWith('CONV_') || this.osState.startsWith('RESET_') || this.osState === 'LIST') {
+      this.exitToNormal();
+      return;
+    }
+
+    // 3. Mode-specific resets
+    if (this.osState.startsWith('SOLVE_')) {
+      this.osState = 'NORMAL';
+      this.solveState = null;
+      this.clearAll();
+      this.display.showView('NORMAL');
+      this.renderCurrentView();
+      return;
+    }
+
+    if (this.osState.startsWith('EQN_')) {
+      if (this.osState === 'EQN_INPUT' || this.osState === 'EQN_ROOT') {
+        this.osState = 'EQN_INPUT';
+        const total = this.eqn.isSimul ? this.eqn.size * (this.eqn.size + 1) : (this.eqn.size + 1);
+        this.eqn.coeffs = new Array(total).fill(0);
+        this.eqn.activeIdx = 0;
+        this.eqn.buffer = '';
+        this.renderEqnInputScreen();
+      } else {
+        this.startEquation();
+      }
+      return;
+    }
+
+    if (this.osState.startsWith('TABLE_')) {
+      this.table = { fx: '', gx: '', start: 1, end: 5, step: 1, rows: [] };
+      this.osState = 'TABLE_FX';
+      this.display.showView('NORMAL');
+      this.display.renderExpression('f(x)=', 5);
+      this.display.setResult('');
+      return;
+    }
+
+    if (this.osState.startsWith('INEQ_')) {
+      this.startInequality();
+      return;
+    }
+
+    if (this.osState.startsWith('RATIO_')) {
+      this.startRatio();
+      return;
+    }
+
+    if (this.osState.startsWith('MAT_') || this.osState.startsWith('VCT_') || this.osState.startsWith('STAT_') || this.osState.startsWith('DIST_') || this.osState.startsWith('SHEET_')) {
+      this.clearAll();
+      this.renderCurrentView();
+      return;
+    }
+
+    // 4. Default: COMP / CMPLX Normal mode
+    this.osState = 'NORMAL';
+    this.clearAll();
+    this.display.showView('NORMAL');
+    this.renderCurrentView();
   }
 
   // Master Key Router
@@ -7787,8 +7902,11 @@ class CasioApp {
     this.cursorPos = 0;
     this.displayResult = '0';
     this.justCalculated = false;
-    this.display.renderExpression('', 0);
-    this.display.setResult('0');
+    if (this.display) {
+      this.display.showView('NORMAL');
+      this.display.renderExpression('', 0);
+      this.display.setResult('0');
+    }
   }
 
   // -------------------------------------------------------------
@@ -8807,7 +8925,28 @@ if (document.readyState === 'loading') {
       this.setupKeyboardShortcuts();
       this.setupRealtimeMirror();
       this.setupKeyLogging();
+      this.setupLcdAutoResize();
       this.applyZoom(1.0);
+    }
+
+    setupLcdAutoResize() {
+      const updateScale = () => {
+        const lcd = this.lcdScreen || document.getElementById('lcd-screen');
+        if (!lcd) return;
+        const rect = lcd.getBoundingClientRect();
+        if (rect.width > 0) {
+          const scale = rect.width / 384;
+          lcd.style.setProperty('--lcd-scale', scale.toFixed(4));
+        }
+      };
+
+      updateScale();
+      if (window.ResizeObserver && this.lcdScreen) {
+        this.lcdResizeObserver = new ResizeObserver(updateScale);
+        this.lcdResizeObserver.observe(this.lcdScreen);
+      }
+      window.addEventListener('resize', updateScale);
+      window.addEventListener('orientationchange', () => setTimeout(updateScale, 100));
     }
 
     /* -------------------------------------------------------------------------
@@ -8841,7 +8980,7 @@ if (document.readyState === 'loading') {
           </div>
         </div>
         <div class="popup-toolbar">
-          <button class="popup-tool-btn" id="popup-copy-btn" title="Sao chép / Chụp ảnh màn hình LCD (Copy LCD Screen)">
+          <button class="popup-tool-btn" id="popup-copy-btn" title="Sao chép ảnh LCD vào Clipboard (Copy to Clipboard)">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
               <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
@@ -8901,7 +9040,7 @@ if (document.readyState === 'loading') {
       // Events inside Pop-up Display
       popup.querySelector('#popup-close-btn').addEventListener('click', () => this.togglePopupDisplay(false));
       popup.querySelector('#popup-detach-btn').addEventListener('click', () => this.openExternalPopupWindow());
-      popup.querySelector('#popup-copy-btn').addEventListener('click', () => this.captureLcdScreen());
+      popup.querySelector('#popup-copy-btn').addEventListener('click', () => this.captureLcdScreen(false));
 
       const gridBtn = popup.querySelector('#popup-grid-btn');
       gridBtn.addEventListener('click', () => {
@@ -9129,7 +9268,7 @@ if (document.readyState === 'loading') {
 </head>
 <body>
   <div class="ext-toolbar">
-    <button class="ext-btn" id="ext-copy-btn" title="Sao chép / Chụp ảnh màn hình LCD">
+    <button class="ext-btn" id="ext-copy-btn" title="Sao chép ảnh LCD vào Clipboard">
       <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
         <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
         <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
@@ -9153,7 +9292,7 @@ if (document.readyState === 'loading') {
 
       const doc = popWin.document;
       doc.getElementById('ext-copy-btn').onclick = () => {
-        this.captureLcdScreen();
+        this.captureLcdScreen(false);
       };
 
       const gridBtn = doc.getElementById('ext-grid-btn');
@@ -9331,7 +9470,11 @@ if (document.readyState === 'loading') {
     /* -------------------------------------------------------------------------
      * 4. Screen Capture (LCD & Full Calculator)
      * ------------------------------------------------------------------------- */
-    async captureLcdScreen() {
+    async copyLcdScreenToClipboard() {
+      await this.captureLcdScreen(false);
+    }
+
+    async captureLcdScreen(download = true) {
       try {
         const offCanvas = document.createElement('canvas');
         const width = 768; // 2x scale of 384
@@ -9436,20 +9579,26 @@ if (document.readyState === 'loading') {
               }
             }
 
-            // 2. Download trigger
-            const url = URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = `casio_fx580vnx_screen_${Date.now()}.png`;
-            a.click();
-            setTimeout(() => URL.revokeObjectURL(url), 5000);
+            // 2. Download trigger (only if download === true)
+            if (download) {
+              const url = URL.createObjectURL(blob);
+              const a = document.createElement('a');
+              a.href = url;
+              a.download = `casio_fx580vnx_screen_${Date.now()}.png`;
+              a.click();
+              setTimeout(() => URL.revokeObjectURL(url), 5000);
+            }
 
             // 3. Show Toast
-            this.showToast(
-              copied
-                ? 'Đã sao chép ảnh LCD vào Clipboard và tải về file PNG!'
-                : 'Đã tải về ảnh màn hình LCD (PNG)!'
-            );
+            if (copied && !download) {
+              this.showToast('📋 Đã sao chép ảnh LCD vào Clipboard! (Nhấn Ctrl+V để dán)');
+            } else if (copied && download) {
+              this.showToast('Đã sao chép ảnh LCD vào Clipboard và tải về file PNG!');
+            } else if (download) {
+              this.showToast('Đã tải về ảnh màn hình LCD (PNG)!');
+            } else {
+              this.showToast('⚠️ Không thể sao chép ảnh vào Clipboard. Vui lòng cho phép quyền Clipboard trên trình duyệt.');
+            }
           }, 'image/png');
         };
 
