@@ -1,0 +1,56 @@
+================================================================================
+          MÁY TÍNH CASIO fx-580VN X CLASSWIZ - BẢN CHẠY OFFLINE
+================================================================================
+
+1. GIỚI THIỆU:
+   - Đây là bản giả lập đầy đủ 100% của máy tính Casio fx-580VN X ClassWiz.
+   - Chạy trực tiếp trên mọi trình duyệt (Chrome, Edge, Cốc Cốc, Firefox, Safari...).
+   - Chạy OFFLINE 100%, KHÔNG cần kết nối mạng Internet, KHÔNG cần cài đặt phần mềm.
+   - Dung lượng siêu nhẹ (~660 KB), có thể lưu vào USB, gửi Zalo, Google Drive, Email.
+
+2. HƯỚNG DẪN SỬ DỤNG TRÊN MÁY TÍNH (WINDOWS / MAC):
+   - Cách 1 (Windows - Gọn đẹp nhất):
+     Nhấp đúp chuột vào tệp 'Chay_May_Tinh_Casio.bat' để mở máy tính trong cửa sổ
+     App độc lập, ôm sát thân máy y như phần mềm cài đặt riêng.
+   - Cách 2 (Mọi hệ điều hành):
+     Nhấp đúp chuột vào tệp 'Casio_fx-580VN_X.html' (hoặc 'index.html') để mở trên
+     trình duyệt web bất kỳ.
+
+3. HƯỚNG DẪN SỬ DỤNG TRÊN IPAD & IPHONE (iOS / iPadOS):
+   iPad và iPhone không chạy được file .bat, nhưng bạn có thể dùng như App thật theo 3 cách:
+
+   ✦ CÁCH 1: DÙNG OFFLINE QUA ỨNG DỤNG "TỆP" (FILES) TRÊN IPAD
+     1. Gửi tệp 'Casio_fx-580VN_X.html' sang iPad (qua AirDrop, Zalo hoặc Drive).
+     2. Lưu tệp vào ứng dụng "Tệp" (Files) trên iPad.
+     3. Nhấp mở tệp bằng trình duyệt Safari.
+     4. Nhấn nút Chia sẻ (biểu tượng ô vuông có mũi tên chỉ lên [^]) trên Safari.
+     5. Chọn "Thêm vào MH chính" (Add to Home Screen) -> Nhấn "Thêm".
+     ==> Trên màn hình chính của iPad sẽ có biểu tượng App fx-580VN X. Mở lên sẽ chạy
+         TOÀN MÀN HÌNH (Full Screen), không có thanh địa chỉ Safari, dùng Offline 100%!
+
+   ✦ CÁCH 2: KẾT NỐI QUA MẠNG WI-FI TỪ MÁY TÍNH
+     1. Kết nối iPad và máy tính vào cùng mạng Wi-Fi.
+     2. Trên máy tính, nhấp đúp vào tệp 'Chia_Se_Cho_iPad_iPhone.bat'.
+     3. Màn hình máy tính sẽ hiện địa chỉ (Ví dụ: http://192.168.1.8:8080).
+     4. Trên iPad, mở Safari và gõ địa chỉ đó vào -> Dùng ngay lập tức!
+     5. Nhấn [^] -> "Thêm vào MH chính" để lưu lại dùng lâu dài.
+
+   ✦ CÁCH 3: ĐƯA LÊN WEB ONLINE MIỄN PHÍ VĨNH VIỄN (TIỆN NHẤT)
+     1. Vào trang web miễn phí: https://app.netlify.com/drop
+     2. Kéo thả tệp 'index.html' vào trang web đó.
+     3. Bạn sẽ có ngay một đường link web cố định (ví dụ: https://casio-580.netlify.app).
+     4. Gửi link này cho bất kỳ ai dùng iPhone, iPad, Android đều mở và dùng được ngay!
+
+4. CÁC TÍNH NĂNG NỔI BẬT:
+   - Đầy đủ 12 Menu: COMP, CMPLX, BASE-N, MATRIX, VECTOR, STAT, DIST, TABLE,
+     EQUATION (Hệ PT & PT đa thức), INEQUALITY, RATIO, SPREADSHEET.
+   - Giao diện Hệ phương trình chuẩn 100% máy thật với dấu ngoặc nhọn lớn { và
+     bảng nhập hệ số đa dòng chuẩn ClassWiz.
+   - Nghiệm căn thức tự nhiên (MathO), phân số 2 tầng, nghiệm phức có biểu tượng 'i'.
+   - Tìm đỉnh Parabol (Min / Max của y) bằng phím mũi tên [Down].
+   - Màn hình Pop-up Display độc lập (phím tắt Ctrl+P hoặc nút trên thanh công cụ):
+     Tự động phóng to đồng bộ chữ số, không có viền xám thừa.
+   - Chức năng chụp ảnh màn hình LCD sắc nét (Ctrl+S) để dán ngay vào đề thi, tài liệu.
+   - Tối ưu hóa cảm ứng cho iPad/iPhone (phản hồi tức thì 0ms, chống zoom nhầm).
+
+================================================================================
