@@ -1459,6 +1459,39 @@
       }
     }
 
+    /* iPad & Tablet: Tăng kích thước modal cho dễ đọc và chạm */
+    @media (min-width: 600px) and (max-width: 1024px) {
+      .emulator-modal-dialog {
+        max-width: 560px;
+        border-radius: 14px;
+      }
+      .emulator-modal-header {
+        padding: 16px 24px;
+      }
+      .emulator-modal-title {
+        font-size: 17px;
+      }
+      .emulator-modal-body {
+        padding: 20px 26px;
+        font-size: 15px;
+        line-height: 1.7;
+      }
+      .emulator-modal-footer {
+        padding: 14px 24px;
+      }
+      .emulator-modal-btn {
+        padding: 10px 28px;
+        font-size: 15px;
+        min-height: 44px;
+        border-radius: 8px;
+      }
+      .emulator-modal-close {
+        width: 36px;
+        height: 36px;
+        font-size: 24px;
+      }
+    }
+
   </style>
 </head>
 <body>
@@ -9063,6 +9096,8 @@ if (document.readyState === 'loading') {
  * Implements Zoom, Pop-up Display (Real-time Mirror), Screen Capture, and Key Logging.
  */
 
+window.CASIO_BUILD_VERSION = 'v2.5 (2026-09-20)';
+
 (function() {
   class EmulatorUI {
     constructor() {
@@ -9096,6 +9131,7 @@ if (document.readyState === 'loading') {
       this.setupKeyLogging();
       this.setupLcdAutoResize();
       this.applyZoom(1.0);
+      this.checkPostUpdateNotice();
     }
 
     setupLcdAutoResize() {
@@ -10130,7 +10166,7 @@ if (document.readyState === 'loading') {
           e.preventDefault();
           e.stopPropagation();
           closeAllDropdowns();
-          this.forceAppUpdate();
+          this.checkForAppUpdate();
         };
         btnUpdate.addEventListener('click', runUpdate);
         btnUpdate.addEventListener('touchend', runUpdate);
@@ -10187,9 +10223,13 @@ if (document.readyState === 'loading') {
       // Cập nhật button
       const btnUpdate = document.getElementById('tb-btn-update');
       if (btnUpdate) {
+        let isUpdating = false;
         const runUpdate = (e) => {
-          e.preventDefault();
-          this.forceAppUpdate();
+          if (e) e.preventDefault();
+          if (isUpdating) return;
+          isUpdating = true;
+          setTimeout(() => { isUpdating = false; }, 2000);
+          this.checkForAppUpdate();
         };
         btnUpdate.addEventListener('click', runUpdate);
         btnUpdate.addEventListener('touchend', runUpdate);
@@ -10283,12 +10323,135 @@ if (document.readyState === 'loading') {
       );
     }
 
-    forceAppUpdate() {
-      this.showToast('🔄 Đang tải phiên bản mới nhất...', 2000);
-      setTimeout(() => {
+    checkPostUpdateNotice() {
+      try {
+        if (localStorage.getItem('casio_updated_success')) {
+          localStorage.removeItem('casio_updated_success');
+          setTimeout(() => {
+            this.showCustomModal(
+              '🎉 Cập Nhật Thành Công!',
+              `<div style="text-align: center; padding: 10px 0;">
+                <div style="font-size: 40px; margin-bottom: 12px;">🎉</div>
+                <div style="font-size: 16px; font-weight: 700; color: #1d1d1f; margin-bottom: 8px;">
+                  Đã cập nhật phiên bản mới nhất!
+                </div>
+                <div style="font-size: 13.5px; color: #444; line-height: 1.7; margin-bottom: 12px; text-align: left; background: #f8f9fa; padding: 12px 16px; border-radius: 8px;">
+                  ✅ <b>Loại bỏ viền đen:</b> Giao diện sáng đẹp, phong cách App thật.<br>
+                  ✅ <b>Nút Cập nhật:</b> Chuyển xuống thanh công cụ tiện lợi.<br>
+                  ✅ <b>Độ nét cao:</b> Tối ưu hiển thị sắc nét trên cả iPad và điện thoại.<br>
+                  ✅ <b>Hiệu ứng 3D:</b> Đổ bóng tự nhiên như máy tính thật.
+                </div>
+              </div>`
+            );
+          }, 400);
+        }
+      } catch (e) {}
+    }
+
+    async checkForAppUpdate() {
+      // 1. Hiển thị thông báo ngay lập tức ở giữa màn hình
+      this.showCustomModal(
+        '🔄 Kiểm Tra Cập Nhật',
+        `<div style="text-align: center; padding: 16px 0;">
+          <div id="update-icon" style="font-size: 38px; margin-bottom: 14px; display: inline-block;">🔄</div>
+          <div id="update-status-title" style="font-size: 16px; font-weight: 700; color: #1d1d1f; margin-bottom: 8px;">
+            Đang kiểm tra phiên bản mới...
+          </div>
+          <div id="update-status-desc" style="font-size: 13px; color: #666; line-height: 1.5;">
+            Đang kết nối đến máy chủ GitHub để kiểm tra bản cập nhật mới nhất. Vui lòng đợi trong giây lát...
+          </div>
+        </div>`
+      );
+
+      const titleEl = document.getElementById('update-status-title');
+      const descEl = document.getElementById('update-status-desc');
+      const iconEl = document.getElementById('update-icon');
+
+      try {
+        // Xóa bộ nhớ cache của Service Worker / CacheStorage nếu có
+        if ('caches' in window) {
+          try {
+            const cacheNames = await caches.keys();
+            await Promise.all(cacheNames.map(name => caches.delete(name)));
+          } catch (e) {}
+        }
+
+        // Tải thử mã nguồn mới từ máy chủ với query timestamp để bỏ qua cache
         const cleanUrl = window.location.origin + window.location.pathname;
-        window.location.href = cleanUrl + '?v=' + Date.now();
-      }, 300);
+        const checkUrl = cleanUrl + '?check=' + Date.now();
+
+        const response = await fetch(checkUrl, {
+          cache: 'no-store',
+          headers: {
+            'Pragma': 'no-cache',
+            'Cache-Control': 'no-cache'
+          }
+        });
+
+        if (!response.ok) throw new Error('HTTP ' + response.status);
+
+        const remoteText = await response.text();
+        const match = remoteText.match(/window\.CASIO_BUILD_VERSION\s*=\s*['"]([^'"]+)['"]/);
+        const remoteVersion = match ? match[1] : null;
+        const currentVersion = window.CASIO_BUILD_VERSION || '';
+
+        // Nếu máy chủ có bản mới hơn hoặc phát hiện khác biệt
+        if (remoteVersion && remoteVersion !== currentVersion) {
+          if (iconEl) iconEl.textContent = '✨';
+          if (titleEl) {
+            titleEl.style.color = '#0066cc';
+            titleEl.textContent = 'Đã có phiên bản mới!';
+          }
+          if (descEl) {
+            descEl.innerHTML = `Tìm thấy bản: <b>${remoteVersion}</b><br>Đang tải và làm mới ứng dụng...`;
+          }
+
+          localStorage.setItem('casio_updated_success', 'true');
+
+          setTimeout(() => {
+            window.location.replace(cleanUrl + '?v=' + Date.now());
+            setTimeout(() => { window.location.reload(); }, 300);
+          }, 1200);
+        } else {
+          // Đã là phiên bản mới nhất
+          if (iconEl) iconEl.textContent = '✅';
+          if (titleEl) {
+            titleEl.style.color = '#2e7d32';
+            titleEl.textContent = 'Bạn đang dùng bản mới nhất!';
+          }
+          if (descEl) {
+            descEl.innerHTML = `Phiên bản hiện tại: <b>${currentVersion}</b><br>Ứng dụng đã được cập nhật đầy đủ tính năng và giao diện mới nhất.`;
+          }
+        }
+      } catch (err) {
+        console.warn('Update check via fetch failed, falling back to direct reload:', err);
+        // Fallback: Cho phép người dùng bấm tải lại trực tiếp nếu mạng chậm hoặc lỗi CORS
+        if (iconEl) iconEl.textContent = '⚡';
+        if (titleEl) {
+          titleEl.style.color = '#1d1d1f';
+          titleEl.textContent = 'Làm mới ứng dụng';
+        }
+        if (descEl) {
+          descEl.innerHTML = `
+            Bấm nút dưới để nạp lại phiên bản mới nhất từ máy chủ:<br><br>
+            <button id="btn-force-reload-action" class="emulator-modal-btn" style="background:#0071e3;color:#fff;border:none;border-radius:6px;padding:9px 22px;font-size:13.5px;font-weight:600;cursor:pointer;">
+              🔄 Tải lại ngay
+            </button>
+          `;
+        }
+
+        setTimeout(() => {
+          const btnReload = document.getElementById('btn-force-reload-action');
+          if (btnReload) {
+            btnReload.addEventListener('click', () => {
+              try { localStorage.setItem('casio_updated_success', 'true'); } catch (e) {}
+              const cleanUrl = window.location.origin + window.location.pathname;
+              window.location.replace(cleanUrl + '?v=' + Date.now());
+              setTimeout(() => { window.location.reload(); }, 200);
+            });
+          }
+        }, 150);
+      }
     }
 
     showHdsdModal() {
