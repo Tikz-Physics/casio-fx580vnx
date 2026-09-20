@@ -209,18 +209,41 @@
       justify-content: space-between;
       padding: 2px 2px 1px 2px;
       overflow: hidden;
+      position: relative;
     }
     .screen-expression {
       font-size: calc(14px * var(--lcd-scale, 1));
       line-height: 1.25;
       white-space: nowrap;
       overflow-x: auto;
-      overflow-y: hidden;
+      overflow-y: auto;
+      scrollbar-width: none;
+      -ms-overflow-style: none;
       min-height: calc(18px * var(--lcd-scale, 1));
       display: flex;
-      align-items: center;
+      align-items: flex-end;
+      padding: 1px calc(9px * var(--lcd-scale, 1)) 1px calc(9px * var(--lcd-scale, 1));
+      box-sizing: border-box;
     }
     .screen-expression::-webkit-scrollbar { display: none; }
+    .expr-scroll-arrow {
+      display: none;
+      position: absolute;
+      top: calc(3.5px * var(--lcd-scale, 1));
+      font-size: calc(7px * var(--lcd-scale, 1));
+      color: var(--lcd-dark);
+      z-index: 5;
+      pointer-events: none;
+      line-height: 1;
+      opacity: 0.9;
+      user-select: none;
+    }
+    .expr-scroll-left {
+      left: 1px;
+    }
+    .expr-scroll-right {
+      right: 1px;
+    }
     .cursor {
       display: inline-block;
       width: max(1.5px, calc(3px * var(--lcd-scale, 1)));
@@ -257,10 +280,10 @@
 
     /* Natural math symbols (MathI/MathO) — Casio ClassWiz Authentic */
     .casio-sup {
-      font-size: 0.62em;
-      display: inline-block;
-      position: relative;
-      top: -0.55em;
+      font-size: 0.65em;
+      display: inline-flex;
+      align-items: flex-end;
+      vertical-align: super;
       line-height: 1;
       margin: 0 0.5px;
     }
@@ -1587,7 +1610,9 @@
 
         <!-- Normal Calculation View -->
         <div class="view-normal" id="view-normal">
+          <span class="expr-scroll-arrow expr-scroll-left" id="expr-scroll-left">◀</span>
           <div class="screen-expression" id="screen-expression"><span class="cursor"></span></div>
+          <span class="expr-scroll-arrow expr-scroll-right" id="expr-scroll-right">▶</span>
           <div class="screen-result" id="screen-result">0</div>
         </div>
 
@@ -1903,6 +1928,93 @@ class MathEngine {
   lcm(a, b) {
     if (a === 0 || b === 0) return 0;
     return Math.abs(Math.round(a * b)) / this.gcd(a, b);
+  }
+
+  toRadicalOrFraction(val) {
+    if (val === undefined || val === null || typeof val !== 'number' || isNaN(val) || !isFinite(val)) {
+      return null;
+    }
+    if (Math.abs(val) < 1e-12) return '0';
+    const signStr = val < 0 ? '-' : '';
+    const x = Math.abs(val);
+
+    // 1. Integer
+    if (Math.abs(x - Math.round(x)) < 1e-10) {
+      return `${signStr}${Math.round(x)}`;
+    }
+
+    // 2. Simple rational fraction (denominator <= 999)
+    const rat = this.toFraction(x, 1000);
+    if (rat && rat.d <= 999 && Math.abs(rat.n) <= 9999 && Math.abs(rat.n / rat.d - x) < 1e-9) {
+      return rat.d > 1 ? `${signStr}${rat.n}/${rat.d}` : `${signStr}${rat.n}`;
+    }
+
+    // 3. Pure single radical: a*sqrt(b)/c (x^2 is rational)
+    const sq = x * x;
+    const frac = this.toFraction(sq, 2000);
+    if (frac && frac.d > 0 && frac.d <= 500 && frac.n <= 500000) {
+      const P = frac.n;
+      const Q = frac.d;
+      if (Math.abs(Math.sqrt(P / Q) - x) < 1e-7) {
+        const K = P * Q;
+        if (K <= 500000) {
+          const limit = Math.floor(Math.sqrt(K));
+          let a = 1;
+          let b = K;
+          for (let d = limit; d > 1; d--) {
+            if (K % (d * d) === 0) {
+              a = d;
+              b = Math.floor(K / (d * d));
+              break;
+            }
+          }
+          if (b <= 200) {
+            const gcdAq = this.gcd(a, Q);
+            const coeff = Math.floor(a / gcdAq);
+            const den = Math.floor(Q / gcdAq);
+            if (den <= 100 && coeff <= 200) {
+              if (b === 1) {
+                return den > 1 ? `${signStr}${coeff}/${den}` : `${signStr}${coeff}`;
+              }
+              const radStr = coeff === 1 ? `\\sqrt{${b}}` : `${coeff}\\sqrt{${b}}`;
+              return den === 1 ? `${signStr}${radStr}` : `${signStr}\\frac{${radStr}}{${den}}`;
+            }
+          }
+        }
+      }
+    }
+
+    // 4. Compound radical: (u + v*sqrt(b)) / d
+    const smallPrimes = [2, 3, 5, 6, 7, 10, 11, 13, 15, 17];
+    for (let i = 0; i < smallPrimes.length; i++) {
+      const b = smallPrimes[i];
+      const sqrtB = Math.sqrt(b);
+      for (let d = 1; d <= 16; d++) {
+        const valD = val * d;
+        for (let v = -20; v <= 20; v++) {
+          if (v === 0) continue;
+          const u = Math.round(valD - v * sqrtB);
+          if (Math.abs((u + v * sqrtB) / d - val) < 1e-8) {
+            let g = this.gcd(this.gcd(Math.abs(u), Math.abs(v)), d);
+            const simU = Math.floor(u / g);
+            const simV = Math.floor(v / g);
+            const simD = Math.floor(d / g);
+
+            let numStr = '';
+            if (simU === 0) {
+              numStr = simV === 1 ? `\\sqrt{${b}}` : (simV === -1 ? `-\\sqrt{${b}}` : `${simV}\\sqrt{${b}}`);
+            } else {
+              const vPart = simV === 1 ? `+\\sqrt{${b}}` : (simV === -1 ? `-\\sqrt{${b}}` : (simV > 0 ? `+${simV}\\sqrt{${b}}` : `${simV}\\sqrt{${b}}`));
+              numStr = `${simU}${vPart}`;
+            }
+
+            return simD === 1 ? numStr : `\\frac{${numStr}}{${simD}}`;
+          }
+        }
+      }
+    }
+
+    return null;
   }
 
   toFraction(val, maxDenominator = 10000) {
@@ -3195,6 +3307,8 @@ class CasioDisplay {
 
     this.exprContainer = document.getElementById('screen-expression');
     this.resultContainer = document.getElementById('screen-result');
+    this.exprScrollLeft = document.getElementById('expr-scroll-left');
+    this.exprScrollRight = document.getElementById('expr-scroll-right');
 
     this.currentView = 'NORMAL';
     this.language = 'VI'; // Default to Vietnamese (Casio fx-580VN X)
@@ -3275,6 +3389,9 @@ class CasioDisplay {
     if (!this.exprContainer) return;
     if (!expr || expr.length === 0) {
       this.exprContainer.innerHTML = '<span class="cursor"></span>';
+      this.exprContainer.scrollLeft = 0;
+      this.exprContainer.scrollTop = 0;
+      this.updateScrollArrows();
       return;
     }
 
@@ -3286,6 +3403,65 @@ class CasioDisplay {
     let html = this.formatToNaturalHtml(fullWithCursor);
     html = html.replace('___CURSOR___', '<span class="cursor"></span>');
     this.exprContainer.innerHTML = html;
+    this.scrollToCursor();
+  }
+
+  scrollToCursor() {
+    if (!this.exprContainer) return;
+    const cursorEl = this.exprContainer.querySelector('.cursor, .empty-box-cursor');
+    if (!cursorEl) {
+      this.updateScrollArrows();
+      return;
+    }
+
+    const container = this.exprContainer;
+    const cRect = container.getBoundingClientRect();
+    const curRect = cursorEl.getBoundingClientRect();
+
+    // Horizontal scroll calculation
+    const curLeftRel = curRect.left - cRect.left + container.scrollLeft;
+    const curRightRel = curRect.right - cRect.left + container.scrollLeft;
+    const marginX = Math.min(28, container.clientWidth * 0.2);
+
+    if (curRightRel > container.scrollLeft + container.clientWidth - marginX) {
+      container.scrollLeft = Math.max(0, curRightRel - container.clientWidth + marginX);
+    } else if (curLeftRel < container.scrollLeft + marginX) {
+      container.scrollLeft = Math.max(0, curLeftRel - marginX);
+    }
+
+    // Vertical scroll calculation
+    const curTopRel = curRect.top - cRect.top + container.scrollTop;
+    const curBottomRel = curRect.bottom - cRect.top + container.scrollTop;
+    const marginY = 2;
+
+    if (curBottomRel > container.scrollTop + container.clientHeight - marginY) {
+      container.scrollTop = Math.max(0, curBottomRel - container.clientHeight + marginY);
+    } else if (curTopRel < container.scrollTop + marginY) {
+      container.scrollTop = Math.max(0, curTopRel - marginY);
+    }
+
+    this.updateScrollArrows();
+  }
+
+  updateScrollArrows() {
+    if (!this.exprContainer) return;
+    const container = this.exprContainer;
+
+    const hasLeft = container.scrollLeft > 2;
+    const hasRight = container.scrollLeft + container.clientWidth < container.scrollWidth - 2;
+
+    if (this.exprScrollLeft) {
+      this.exprScrollLeft.style.display = hasLeft ? 'block' : 'none';
+    }
+    if (this.exprScrollRight) {
+      this.exprScrollRight.style.display = hasRight ? 'block' : 'none';
+    }
+
+    if (this.currentView === 'NORMAL') {
+      const hasUp = container.scrollTop > 2;
+      const hasDown = container.scrollTop + container.clientHeight < container.scrollHeight - 2;
+      this.setScrollArrows(hasUp, hasDown);
+    }
   }
 
   setPower(isOn) {
@@ -3375,7 +3551,7 @@ class CasioDisplay {
     };
 
     // Iteratively resolve innermost templates (supports arbitrary nesting without regex conflict)
-    for (let iter = 0; iter < 6; iter++) {
+    for (let iter = 0; iter < 50; iter++) {
       let changed = false;
 
       // Mixed Fractions: \mixedfrac{whole}{num}{den}
@@ -3499,7 +3675,7 @@ class CasioDisplay {
     }
 
     // 3. LaTeX / Math formatted expressions
-    if (str.includes('\\frac') || str.includes('^') || str.includes('√')) {
+    if (str.includes('\\frac') || str.includes('^') || str.includes('√') || str.includes('\\sqrt')) {
       return this.formatToNaturalHtml(str);
     }
 
@@ -7355,183 +7531,197 @@ class CasioApp {
     this.display.renderExpression(this.expression, this.cursorPos);
   }
 
+  findMatchingBrace(str, openIdx) {
+    if (!str || str[openIdx] !== '{') return -1;
+    let depth = 0;
+    for (let i = openIdx; i < str.length; i++) {
+      if (str[i] === '{') depth++;
+      else if (str[i] === '}') {
+        depth--;
+        if (depth === 0) return i;
+      }
+    }
+    return -1;
+  }
+
   parseTemplates(expr) {
     const slots = [];
     if (!expr) return slots;
 
-    let m;
+    // Helper to extract slot bounds using matching braces
+    const findArg = (startIdx) => {
+      const openIdx = expr.indexOf('{', startIdx);
+      if (openIdx === -1) return null;
+      const closeIdx = this.findMatchingBrace(expr, openIdx);
+      if (closeIdx === -1) return null;
+      return {
+        open: openIdx,
+        close: closeIdx,
+        slot: { start: openIdx + 1, end: closeIdx, text: expr.slice(openIdx + 1, closeIdx) }
+      };
+    };
 
     // 1. Mixed fraction: \mixedfrac{whole}{num}{den}
-    const mfRegex = /\\mixedfrac\{([^}]*)\}\{([^}]*)\}\{([^}]*)\}/g;
+    let m;
+    const mfRegex = /\\mixedfrac(?=\{)/g;
     while ((m = mfRegex.exec(expr)) !== null) {
-      const fullStart = m.index;
-      const wStart = fullStart + '\\mixedfrac{'.length;
-      const wEnd = wStart + m[1].length;
-      const nStart = wEnd + '}{'.length;
-      const nEnd = nStart + m[2].length;
-      const dStart = nEnd + '}{'.length;
-      const dEnd = dStart + m[3].length;
-      const fullEnd = dEnd + 1;
-      slots.push({
-        type: 'mixedfrac', fullStart, fullEnd,
-        whole: { start: wStart, end: wEnd, text: m[1] },
-        num: { start: nStart, end: nEnd, text: m[2] },
-        den: { start: dStart, end: dEnd, text: m[3] }
-      });
+      const a1 = findArg(m.index);
+      if (a1) {
+        const a2 = findArg(a1.close + 1);
+        if (a2) {
+          const a3 = findArg(a2.close + 1);
+          if (a3) {
+            slots.push({
+              type: 'mixedfrac', fullStart: m.index, fullEnd: a3.close + 1,
+              whole: a1.slot, num: a2.slot, den: a3.slot
+            });
+          }
+        }
+      }
     }
 
     // 2. Simple fraction: \frac{num}{den}
-    const fRegex = /\\frac\{([^}]*)\}\{([^}]*)\}/g;
+    const fRegex = /\\frac(?=\{)/g;
     while ((m = fRegex.exec(expr)) !== null) {
-      const fullStart = m.index;
-      const nStart = fullStart + '\\frac{'.length;
-      const nEnd = nStart + m[1].length;
-      const dStart = nEnd + '}{'.length;
-      const dEnd = dStart + m[2].length;
-      const fullEnd = dEnd + 1;
-      slots.push({
-        type: 'frac', fullStart, fullEnd,
-        num: { start: nStart, end: nEnd, text: m[1] },
-        den: { start: dStart, end: dEnd, text: m[2] }
-      });
+      const a1 = findArg(m.index);
+      if (a1) {
+        const a2 = findArg(a1.close + 1);
+        if (a2) {
+          slots.push({
+            type: 'frac', fullStart: m.index, fullEnd: a2.close + 1,
+            num: a1.slot, den: a2.slot
+          });
+        }
+      }
     }
 
     // 3. Integral: \int{lower}{upper}{expr}
-    const intRegex = /\\int\{([^}]*)\}\{([^}]*)\}\{([^}]*)\}/g;
+    const intRegex = /\\int(?=\{)/g;
     while ((m = intRegex.exec(expr)) !== null) {
-      const fullStart = m.index;
-      const lStart = fullStart + '\\int{'.length;
-      const lEnd = lStart + m[1].length;
-      const uStart = lEnd + '}{'.length;
-      const uEnd = uStart + m[2].length;
-      const eStart = uEnd + '}{'.length;
-      const eEnd = eStart + m[3].length;
-      const fullEnd = eEnd + 1;
-      slots.push({
-        type: 'int', fullStart, fullEnd,
-        lower: { start: lStart, end: lEnd, text: m[1] },
-        upper: { start: uStart, end: uEnd, text: m[2] },
-        expr: { start: eStart, end: eEnd, text: m[3] }
-      });
+      const a1 = findArg(m.index);
+      if (a1) {
+        const a2 = findArg(a1.close + 1);
+        if (a2) {
+          const a3 = findArg(a2.close + 1);
+          if (a3) {
+            slots.push({
+              type: 'int', fullStart: m.index, fullEnd: a3.close + 1,
+              lower: a1.slot, upper: a2.slot, expr: a3.slot
+            });
+          }
+        }
+      }
     }
 
     // 4. Summation: \sum{lower}{upper}{expr}
-    const sumRegex = /\\sum\{([^}]*)\}\{([^}]*)\}\{([^}]*)\}/g;
+    const sumRegex = /\\sum(?=\{)/g;
     while ((m = sumRegex.exec(expr)) !== null) {
-      const fullStart = m.index;
-      const lStart = fullStart + '\\sum{'.length;
-      const lEnd = lStart + m[1].length;
-      const uStart = lEnd + '}{'.length;
-      const uEnd = uStart + m[2].length;
-      const eStart = uEnd + '}{'.length;
-      const eEnd = eStart + m[3].length;
-      const fullEnd = eEnd + 1;
-      slots.push({
-        type: 'sum', fullStart, fullEnd,
-        lower: { start: lStart, end: lEnd, text: m[1] },
-        upper: { start: uStart, end: uEnd, text: m[2] },
-        expr: { start: eStart, end: eEnd, text: m[3] }
-      });
+      const a1 = findArg(m.index);
+      if (a1) {
+        const a2 = findArg(a1.close + 1);
+        if (a2) {
+          const a3 = findArg(a2.close + 1);
+          if (a3) {
+            slots.push({
+              type: 'sum', fullStart: m.index, fullEnd: a3.close + 1,
+              lower: a1.slot, upper: a2.slot, expr: a3.slot
+            });
+          }
+        }
+      }
     }
 
     // 5. Derivative: \diff{expr}{point}
-    const diffRegex = /\\diff\{([^}]*)\}\{([^}]*)\}/g;
+    const diffRegex = /\\diff(?=\{)/g;
     while ((m = diffRegex.exec(expr)) !== null) {
-      const fullStart = m.index;
-      const eStart = fullStart + '\\diff{'.length;
-      const eEnd = eStart + m[1].length;
-      const pStart = eEnd + '}{'.length;
-      const pEnd = pStart + m[2].length;
-      const fullEnd = pEnd + 1;
-      slots.push({
-        type: 'diff', fullStart, fullEnd,
-        expr: { start: eStart, end: eEnd, text: m[1] },
-        point: { start: pStart, end: pEnd, text: m[2] }
-      });
+      const a1 = findArg(m.index);
+      if (a1) {
+        const a2 = findArg(a1.close + 1);
+        if (a2) {
+          slots.push({
+            type: 'diff', fullStart: m.index, fullEnd: a2.close + 1,
+            expr: a1.slot, point: a2.slot
+          });
+        }
+      }
     }
 
     // 6. Logbase: \logbase{base}{expr}
-    const logRegex = /\\logbase\{([^}]*)\}\{([^}]*)\}/g;
+    const logRegex = /\\logbase(?=\{)/g;
     while ((m = logRegex.exec(expr)) !== null) {
-      const fullStart = m.index;
-      const bStart = fullStart + '\\logbase{'.length;
-      const bEnd = bStart + m[1].length;
-      const eStart = bEnd + '}{'.length;
-      const eEnd = eStart + m[2].length;
-      const fullEnd = eEnd + 1;
-      slots.push({
-        type: 'logbase', fullStart, fullEnd,
-        base: { start: bStart, end: bEnd, text: m[1] },
-        expr: { start: eStart, end: eEnd, text: m[2] }
-      });
+      const a1 = findArg(m.index);
+      if (a1) {
+        const a2 = findArg(a1.close + 1);
+        if (a2) {
+          slots.push({
+            type: 'logbase', fullStart: m.index, fullEnd: a2.close + 1,
+            base: a1.slot, expr: a2.slot
+          });
+        }
+      }
     }
 
     // 7. N-th root: \nthroot{root}{rad}
-    const nrRegex = /\\nthroot\{([^}]*)\}\{([^}]*)\}/g;
+    const nrRegex = /\\nthroot(?=\{)/g;
     while ((m = nrRegex.exec(expr)) !== null) {
-      const fullStart = m.index;
-      const rtStart = fullStart + '\\nthroot{'.length;
-      const rtEnd = rtStart + m[1].length;
-      const rdStart = rtEnd + '}{'.length;
-      const rdEnd = rdStart + m[2].length;
-      const fullEnd = rdEnd + 1;
-      slots.push({
-        type: 'nthroot', fullStart, fullEnd,
-        root: { start: rtStart, end: rtEnd, text: m[1] },
-        rad: { start: rdStart, end: rdEnd, text: m[2] }
-      });
+      const a1 = findArg(m.index);
+      if (a1) {
+        const a2 = findArg(a1.close + 1);
+        if (a2) {
+          slots.push({
+            type: 'nthroot', fullStart: m.index, fullEnd: a2.close + 1,
+            root: a1.slot, rad: a2.slot
+          });
+        }
+      }
     }
 
     // 8. Cubic root: \cbrt{rad}
-    const cbRegex = /\\cbrt\{([^}]*)\}/g;
+    const cbRegex = /\\cbrt(?=\{)/g;
     while ((m = cbRegex.exec(expr)) !== null) {
-      const fullStart = m.index;
-      const radStart = fullStart + '\\cbrt{'.length;
-      const radEnd = radStart + m[1].length;
-      const fullEnd = radEnd + 1;
-      slots.push({
-        type: 'cbrt', fullStart, fullEnd,
-        rad: { start: radStart, end: radEnd, text: m[1] }
-      });
+      const a1 = findArg(m.index);
+      if (a1) {
+        slots.push({
+          type: 'cbrt', fullStart: m.index, fullEnd: a1.close + 1,
+          rad: a1.slot
+        });
+      }
     }
 
     // 9. Radical: \sqrt{rad}
-    const sRegex = /\\sqrt\{([^}]*)\}/g;
+    const sRegex = /\\sqrt(?=\{)/g;
     while ((m = sRegex.exec(expr)) !== null) {
-      const fullStart = m.index;
-      const radStart = fullStart + '\\sqrt{'.length;
-      const radEnd = radStart + m[1].length;
-      const fullEnd = radEnd + 1;
-      slots.push({
-        type: 'sqrt', fullStart, fullEnd,
-        rad: { start: radStart, end: radEnd, text: m[1] }
-      });
+      const a1 = findArg(m.index);
+      if (a1) {
+        slots.push({
+          type: 'sqrt', fullStart: m.index, fullEnd: a1.close + 1,
+          rad: a1.slot
+        });
+      }
     }
 
     // 10. Absolute value: \abs{expr}
-    const absRegex = /\\abs\{([^}]*)\}/g;
+    const absRegex = /\\abs(?=\{)/g;
     while ((m = absRegex.exec(expr)) !== null) {
-      const fullStart = m.index;
-      const eStart = fullStart + '\\abs{'.length;
-      const eEnd = eStart + m[1].length;
-      const fullEnd = eEnd + 1;
-      slots.push({
-        type: 'abs', fullStart, fullEnd,
-        expr: { start: eStart, end: eEnd, text: m[1] }
-      });
+      const a1 = findArg(m.index);
+      if (a1) {
+        slots.push({
+          type: 'abs', fullStart: m.index, fullEnd: a1.close + 1,
+          expr: a1.slot
+        });
+      }
     }
 
     // 11. Exponent: ^{exp}
-    const pRegex = /\^\{([^}]*)\}/g;
+    const pRegex = /\^(?=\{)/g;
     while ((m = pRegex.exec(expr)) !== null) {
-      const fullStart = m.index;
-      const expStart = fullStart + '^{'.length;
-      const expEnd = expStart + m[1].length;
-      const fullEnd = expEnd + 1;
-      slots.push({
-        type: 'pow', fullStart, fullEnd,
-        exp: { start: expStart, end: expEnd, text: m[1] }
-      });
+      const a1 = findArg(m.index);
+      if (a1) {
+        slots.push({
+          type: 'pow', fullStart: m.index, fullEnd: a1.close + 1,
+          exp: a1.slot
+        });
+      }
     }
 
     slots.sort((a, b) => a.fullStart - b.fullStart);
@@ -8352,14 +8542,25 @@ class CasioApp {
 
     if (typeof res === 'string') {
       this.displayResult = res;
+      this.exactResult = res;
     } else if (isNaN(res)) {
       this.displayResult = 'Math ERROR';
+      this.exactResult = 'Math ERROR';
     } else {
-      const frac = this.engine.toFraction(res);
-      if (frac && frac.d !== 1 && Math.abs(frac.d) < 1000) {
-        this.displayResult = `${frac.n}/${frac.d}`;
+      const exact = this.engine.toRadicalOrFraction(res);
+      if (exact) {
+        this.exactResult = exact;
+        this.displayResult = exact;
       } else {
-        this.displayResult = String(Number(res.toFixed(10)));
+        const frac = this.engine.toFraction(res);
+        if (frac && frac.d !== 1 && Math.abs(frac.d) < 1000) {
+          this.exactResult = `${frac.n}/${frac.d}`;
+          this.displayResult = `${frac.n}/${frac.d}`;
+        } else {
+          const decStr = String(Number(res.toFixed(10)));
+          this.exactResult = decStr;
+          this.displayResult = decStr;
+        }
       }
     }
 
@@ -8373,12 +8574,17 @@ class CasioApp {
   handleSD() {
     if (this.rawResult === undefined || isNaN(this.rawResult) || typeof this.rawResult === 'string') return;
 
-    if (this.displayResult.includes('/')) {
-      this.displayResult = String(Number(this.rawResult.toFixed(10)));
+    const decStr = String(Number(this.rawResult.toFixed(10)));
+    if (this.exactResult && this.displayResult !== decStr) {
+      this.displayResult = decStr;
+    } else if (this.exactResult && this.displayResult === decStr) {
+      this.displayResult = this.exactResult;
     } else {
-      const frac = this.engine.toFraction(this.rawResult);
-      if (frac && frac.d > 1) {
-        this.displayResult = `${frac.n}/${frac.d}`;
+      if (this.displayResult.includes('/') || this.displayResult.includes('\\sqrt')) {
+        this.displayResult = decStr;
+      } else {
+        const exact = this.engine.toRadicalOrFraction(this.rawResult);
+        if (exact) this.displayResult = exact;
       }
     }
     this.display.setResult(this.displayResult);
@@ -9102,7 +9308,7 @@ if (document.readyState === 'loading') {
  * Implements Zoom, Pop-up Display (Real-time Mirror), Screen Capture, and Key Logging.
  */
 
-window.CASIO_BUILD_VERSION = 'v2.5.1 (2026-09-20)';
+window.CASIO_BUILD_VERSION = 'v2.5.2 (2026-09-20)';
 
 (function() {
   class EmulatorUI {
