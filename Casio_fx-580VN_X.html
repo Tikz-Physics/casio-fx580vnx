@@ -201,16 +201,76 @@
       overflow: visible;
     }
 
-    /* Normal Calculation Screen */
+    /* Normal Calculation Screen - Authentic Casio fx-580VN X Display Modes */
     .view-normal {
       flex: 1;
       display: flex;
       flex-direction: column;
       justify-content: space-between;
-      padding: 2px 2px 1px 2px;
+      padding: 1px;
       overflow: hidden;
       position: relative;
     }
+
+    /* Mode: Ready / Standby (AC state before typing) */
+    .view-normal.mode-ready .screen-expression {
+      flex: 0 0 auto;
+      min-height: calc(18px * var(--lcd-scale, 1));
+      display: flex;
+      align-items: center;
+      padding: calc(2px * var(--lcd-scale, 1)) calc(13px * var(--lcd-scale, 1));
+    }
+    .view-normal.mode-ready .screen-result {
+      flex: 1;
+      display: flex;
+      justify-content: flex-end;
+      align-items: center;
+      font-size: calc(21px * var(--lcd-scale, 1));
+      font-weight: normal;
+      text-align: right;
+      letter-spacing: 0.5px;
+      min-height: calc(22px * var(--lcd-scale, 1));
+      padding-right: 3px;
+      padding-bottom: 1px;
+    }
+
+    /* Mode: Input / Editing (Expression takes full height, result line is hidden) */
+    .view-normal.mode-input .screen-expression {
+      flex: 1;
+      min-height: 100%;
+      height: 100%;
+      display: flex;
+      align-items: center;
+      padding: calc(2px * var(--lcd-scale, 1)) calc(13px * var(--lcd-scale, 1));
+    }
+    .view-normal.mode-input .screen-result {
+      display: none !important;
+    }
+
+    /* Mode: Result (Expression compact on top, result large at bottom) */
+    .view-normal.mode-result .screen-expression {
+      flex: 0 0 auto;
+      max-height: 42%;
+      font-size: calc(13px * var(--lcd-scale, 1));
+      display: flex;
+      align-items: center;
+      padding: calc(1px * var(--lcd-scale, 1)) calc(13px * var(--lcd-scale, 1));
+    }
+    .view-normal.mode-result .screen-result {
+      flex: 1;
+      display: flex;
+      justify-content: flex-end;
+      align-items: center;
+      font-size: calc(21px * var(--lcd-scale, 1));
+      font-weight: normal;
+      text-align: right;
+      letter-spacing: 0.5px;
+      min-height: calc(22px * var(--lcd-scale, 1));
+      padding-right: 3px;
+      padding-bottom: 1px;
+    }
+
+    /* Base .screen-expression rules */
     .screen-expression {
       font-size: calc(14px * var(--lcd-scale, 1));
       line-height: 1.25;
@@ -221,29 +281,35 @@
       -ms-overflow-style: none;
       min-height: calc(18px * var(--lcd-scale, 1));
       display: flex;
-      align-items: flex-end;
-      padding: calc(3px * var(--lcd-scale, 1)) calc(9px * var(--lcd-scale, 1)) 1px calc(9px * var(--lcd-scale, 1));
+      align-items: center;
+      padding: calc(2px * var(--lcd-scale, 1)) calc(13px * var(--lcd-scale, 1));
       box-sizing: border-box;
       position: relative;
     }
     .screen-expression::-webkit-scrollbar { display: none; }
+
+    /* Authentic Casio ClassWiz Horizontal Scroll Arrow Indicators */
     .expr-scroll-arrow {
       display: none;
       position: absolute;
-      top: calc(3.5px * var(--lcd-scale, 1));
-      font-size: calc(7px * var(--lcd-scale, 1));
+      top: 50%;
+      transform: translateY(-50%);
+      font-size: calc(8px * var(--lcd-scale, 1));
       color: var(--lcd-dark);
-      z-index: 5;
+      z-index: 10;
       pointer-events: none;
       line-height: 1;
-      opacity: 0.9;
+      opacity: 0.95;
       user-select: none;
     }
+    .view-normal.mode-result .expr-scroll-arrow {
+      top: 25%;
+    }
     .expr-scroll-left {
-      left: 1px;
+      left: 2px;
     }
     .expr-scroll-right {
-      right: 1px;
+      right: 2px;
     }
     .cursor {
       display: inline-block;
@@ -3386,8 +3452,24 @@ class CasioDisplay {
   }
 
   // View: NORMAL (COMP / CMPLX calculations)
+  setMode(mode) {
+    this.currentMode = mode;
+    if (!this.viewNormal) return;
+    this.viewNormal.classList.remove('mode-ready', 'mode-input', 'mode-result');
+    if (mode === 'ready') {
+      this.viewNormal.classList.add('mode-ready');
+    } else if (mode === 'result') {
+      this.viewNormal.classList.add('mode-result');
+    } else {
+      this.viewNormal.classList.add('mode-input');
+    }
+  }
+
   renderExpression(expr, cursorPos = (expr ? expr.length : 0)) {
     if (!this.exprContainer) return;
+    if (expr && expr.length > 0 && this.currentMode !== 'result') {
+      this.setMode('input');
+    }
     if (!expr || expr.length === 0) {
       this.exprContainer.innerHTML = '<span class="cursor"></span>';
       this.exprContainer.scrollLeft = 0;
@@ -3422,10 +3504,20 @@ class CasioDisplay {
       cursorEl.scrollIntoView({ block: 'nearest', inline: 'nearest' });
     } catch (e) {}
 
-    // Precise offset-based margin positioning (immune to CSS scale / zoom / transforms)
-    const curLeft = cursorEl.offsetLeft;
+    // Precise cumulative offset calculation relative to container
+    let curLeft = 0;
+    let curTop = 0;
+    let el = cursorEl;
+    while (el && el !== container) {
+      curLeft += el.offsetLeft;
+      curTop += el.offsetTop;
+      el = el.offsetParent;
+    }
     const curRight = curLeft + cursorEl.offsetWidth;
-    const marginX = Math.min(28, container.clientWidth * 0.2);
+    const curBottom = curTop + cursorEl.offsetHeight;
+
+    // Horizontal scroll calculation with generous margin
+    const marginX = Math.min(35, Math.max(20, container.clientWidth * 0.22));
 
     if (curRight > container.scrollLeft + container.clientWidth - marginX) {
       container.scrollLeft = Math.max(0, curRight - container.clientWidth + marginX);
@@ -3433,10 +3525,8 @@ class CasioDisplay {
       container.scrollLeft = Math.max(0, curLeft - marginX);
     }
 
-    // Vertical positioning
-    const curTop = cursorEl.offsetTop;
-    const curBottom = curTop + cursorEl.offsetHeight;
-    const marginY = 3;
+    // Vertical scroll calculation
+    const marginY = 4;
 
     if (curBottom > container.scrollTop + container.clientHeight - marginY) {
       container.scrollTop = Math.max(0, curBottom - container.clientHeight + marginY);
@@ -3462,9 +3552,11 @@ class CasioDisplay {
     }
 
     if (this.currentView === 'NORMAL') {
-      const hasUp = container.scrollTop > 2;
-      const hasDown = container.scrollTop + container.clientHeight < container.scrollHeight - 2;
-      this.setScrollArrows(hasUp, hasDown);
+      if (this.currentMode === 'input') {
+        const hasUp = container.scrollTop > 2;
+        const hasDown = container.scrollTop + container.clientHeight < container.scrollHeight - 2;
+        this.setScrollArrows(hasUp, hasDown);
+      }
     }
   }
 
@@ -3690,6 +3782,11 @@ class CasioDisplay {
   setResult(val) {
     if (!this.resultContainer) return;
     this.resultContainer.innerHTML = this.formatResultHtml(val);
+    if (val && val !== '') {
+      this.setMode('result');
+    } else {
+      this.setMode('input');
+    }
   }
 
   // View: AUTHENTIC 2x4 CLASSWIZ MONOCHROME MENU (Matches fx-580VN X 100%)
@@ -4408,9 +4505,21 @@ class CasioApp {
         this.handleSD();
         break;
       case 'LEFT':
+        if (this.justCalculated) {
+          this.justCalculated = false;
+          this.displayResult = '';
+          this.display.setResult('');
+          this.display.setMode('input');
+        }
         this.moveCursor(-1);
         break;
       case 'RIGHT':
+        if (this.justCalculated) {
+          this.justCalculated = false;
+          this.displayResult = '';
+          this.display.setResult('');
+          this.display.setMode('input');
+        }
         this.moveCursor(1);
         break;
       case 'UP':
@@ -5043,12 +5152,21 @@ class CasioApp {
     this.display.renderExpression(this.expression, this.cursorPos);
   }
 
-  insertFrac() {
+  prepareForInput(isNewCalculation = true) {
     if (this.justCalculated) {
-      this.expression = '';
-      this.cursorPos = 0;
+      if (isNewCalculation) {
+        this.expression = '';
+        this.cursorPos = 0;
+      }
       this.justCalculated = false;
+      this.displayResult = '';
+      this.display.setResult('');
     }
+    this.display.setMode('input');
+  }
+
+  insertFrac() {
+    this.prepareForInput(true);
     const before = this.expression.slice(0, this.cursorPos);
     const after = this.expression.slice(this.cursorPos);
     const match = before.match(/([0-9.]+)$/);
@@ -5065,11 +5183,7 @@ class CasioApp {
   }
 
   insertMixedFrac() {
-    if (this.justCalculated) {
-      this.expression = '';
-      this.cursorPos = 0;
-      this.justCalculated = false;
-    }
+    this.prepareForInput(true);
     const before = this.expression.slice(0, this.cursorPos);
     const after = this.expression.slice(this.cursorPos);
     this.expression = `${before}\\mixedfrac{}{}{}${after}`;
@@ -5091,11 +5205,7 @@ class CasioApp {
   }
 
   insertSqrt() {
-    if (this.justCalculated) {
-      this.expression = '';
-      this.cursorPos = 0;
-      this.justCalculated = false;
-    }
+    this.prepareForInput(true);
     const before = this.expression.slice(0, this.cursorPos);
     const after = this.expression.slice(this.cursorPos);
     this.expression = `${before}\\sqrt{}${after}`;
@@ -5104,11 +5214,7 @@ class CasioApp {
   }
 
   insertNthRoot() {
-    if (this.justCalculated) {
-      this.expression = '';
-      this.cursorPos = 0;
-      this.justCalculated = false;
-    }
+    this.prepareForInput(true);
     const before = this.expression.slice(0, this.cursorPos);
     const after = this.expression.slice(this.cursorPos);
     this.expression = `${before}\\nthroot{}{}${after}`;
@@ -5131,11 +5237,7 @@ class CasioApp {
   }
 
   insertDiff() {
-    if (this.justCalculated) {
-      this.expression = '';
-      this.cursorPos = 0;
-      this.justCalculated = false;
-    }
+    this.prepareForInput(true);
     const before = this.expression.slice(0, this.cursorPos);
     const after = this.expression.slice(this.cursorPos);
     this.expression = `${before}\\diff{}{}${after}`;
@@ -5145,11 +5247,7 @@ class CasioApp {
   }
 
   insertSum() {
-    if (this.justCalculated) {
-      this.expression = '';
-      this.cursorPos = 0;
-      this.justCalculated = false;
-    }
+    this.prepareForInput(true);
     const before = this.expression.slice(0, this.cursorPos);
     const after = this.expression.slice(this.cursorPos);
     this.expression = `${before}\\sum{}{}{}${after}`;
@@ -5159,11 +5257,7 @@ class CasioApp {
   }
 
   insertLogBase() {
-    if (this.justCalculated) {
-      this.expression = '';
-      this.cursorPos = 0;
-      this.justCalculated = false;
-    }
+    this.prepareForInput(true);
     const before = this.expression.slice(0, this.cursorPos);
     const after = this.expression.slice(this.cursorPos);
     this.expression = `${before}\\logbase{}{}${after}`;
@@ -5173,11 +5267,7 @@ class CasioApp {
   }
 
   insertCbrt() {
-    if (this.justCalculated) {
-      this.expression = '';
-      this.cursorPos = 0;
-      this.justCalculated = false;
-    }
+    this.prepareForInput(true);
     const before = this.expression.slice(0, this.cursorPos);
     const after = this.expression.slice(this.cursorPos);
     this.expression = `${before}\\cbrt{}${after}`;
@@ -5186,11 +5276,7 @@ class CasioApp {
   }
 
   insertAbs() {
-    if (this.justCalculated) {
-      this.expression = '';
-      this.cursorPos = 0;
-      this.justCalculated = false;
-    }
+    this.prepareForInput(true);
     const before = this.expression.slice(0, this.cursorPos);
     const after = this.expression.slice(this.cursorPos);
     this.expression = `${before}\\abs{}${after}`;
@@ -7524,8 +7610,11 @@ class CasioApp {
     if (this.justCalculated && !['+','−','×','÷','^'].includes(token)) {
       this.expression = '';
       this.cursorPos = 0;
+      this.displayResult = '';
+      this.display.setResult('');
     }
     this.justCalculated = false;
+    this.display.setMode('input');
 
     const before = this.expression.slice(0, this.cursorPos);
     const after = this.expression.slice(this.cursorPos);
@@ -8303,8 +8392,11 @@ class CasioApp {
     this.justCalculated = false;
     if (this.display) {
       this.display.showView('NORMAL');
+      this.display.setMode('ready');
       this.display.renderExpression('', 0);
       this.display.setResult('0');
+      this.display.setScrollArrows(false, false);
+      this.display.updateScrollArrows();
     }
   }
 
@@ -8593,10 +8685,11 @@ class CasioApp {
       }
     }
 
+    this.justCalculated = true;
+    this.display.setMode('result');
     this.display.setResult(this.displayResult);
     this.history.push({ expr: this.expression, res: this.displayResult });
     this.historyIndex = this.history.length;
-    this.justCalculated = true;
     this.display.setScrollArrows(true, false);
     this.display.updateScrollArrows();
   }
@@ -9338,7 +9431,7 @@ if (document.readyState === 'loading') {
  * Implements Zoom, Pop-up Display (Real-time Mirror), Screen Capture, and Key Logging.
  */
 
-window.CASIO_BUILD_VERSION = 'v2.5.3 (2026-09-20)';
+window.CASIO_BUILD_VERSION = 'v2.5.4 (2026-09-20)';
 
 (function() {
   class EmulatorUI {
