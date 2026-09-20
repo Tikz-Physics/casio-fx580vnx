@@ -222,8 +222,9 @@
       min-height: calc(18px * var(--lcd-scale, 1));
       display: flex;
       align-items: flex-end;
-      padding: 1px calc(9px * var(--lcd-scale, 1)) 1px calc(9px * var(--lcd-scale, 1));
+      padding: calc(3px * var(--lcd-scale, 1)) calc(9px * var(--lcd-scale, 1)) 1px calc(9px * var(--lcd-scale, 1));
       box-sizing: border-box;
+      position: relative;
     }
     .screen-expression::-webkit-scrollbar { display: none; }
     .expr-scroll-arrow {
@@ -3415,29 +3416,32 @@ class CasioDisplay {
     }
 
     const container = this.exprContainer;
-    const cRect = container.getBoundingClientRect();
-    const curRect = cursorEl.getBoundingClientRect();
 
-    // Horizontal scroll calculation
-    const curLeftRel = curRect.left - cRect.left + container.scrollLeft;
-    const curRightRel = curRect.right - cRect.left + container.scrollLeft;
+    // Use native scrollIntoView as foundational guarantee
+    try {
+      cursorEl.scrollIntoView({ block: 'nearest', inline: 'nearest' });
+    } catch (e) {}
+
+    // Precise offset-based margin positioning (immune to CSS scale / zoom / transforms)
+    const curLeft = cursorEl.offsetLeft;
+    const curRight = curLeft + cursorEl.offsetWidth;
     const marginX = Math.min(28, container.clientWidth * 0.2);
 
-    if (curRightRel > container.scrollLeft + container.clientWidth - marginX) {
-      container.scrollLeft = Math.max(0, curRightRel - container.clientWidth + marginX);
-    } else if (curLeftRel < container.scrollLeft + marginX) {
-      container.scrollLeft = Math.max(0, curLeftRel - marginX);
+    if (curRight > container.scrollLeft + container.clientWidth - marginX) {
+      container.scrollLeft = Math.max(0, curRight - container.clientWidth + marginX);
+    } else if (curLeft < container.scrollLeft + marginX) {
+      container.scrollLeft = Math.max(0, curLeft - marginX);
     }
 
-    // Vertical scroll calculation
-    const curTopRel = curRect.top - cRect.top + container.scrollTop;
-    const curBottomRel = curRect.bottom - cRect.top + container.scrollTop;
-    const marginY = 2;
+    // Vertical positioning
+    const curTop = cursorEl.offsetTop;
+    const curBottom = curTop + cursorEl.offsetHeight;
+    const marginY = 3;
 
-    if (curBottomRel > container.scrollTop + container.clientHeight - marginY) {
-      container.scrollTop = Math.max(0, curBottomRel - container.clientHeight + marginY);
-    } else if (curTopRel < container.scrollTop + marginY) {
-      container.scrollTop = Math.max(0, curTopRel - marginY);
+    if (curBottom > container.scrollTop + container.clientHeight - marginY) {
+      container.scrollTop = Math.max(0, curBottom - container.clientHeight + marginY);
+    } else if (curTop < container.scrollTop + marginY) {
+      container.scrollTop = Math.max(0, curTop - marginY);
     }
 
     this.updateScrollArrows();
@@ -7783,98 +7787,123 @@ class CasioApp {
     return list.length > 0 ? list[0] : null;
   }
 
-  navigateVertical(dir) {
-    const activeList = this.findAllActiveSlots(this.expression, this.cursorPos);
-    for (const active of activeList) {
-      const t = active.template;
+  getLeafSlots(expr) {
+    const templates = this.parseTemplates(expr);
+    const allSlots = [];
+    for (const t of templates) {
       if (t.type === 'frac') {
-        if (active.part === 'num' && dir > 0) {
-          this.cursorPos = t.den.start;
-          this.display.renderExpression(this.expression, this.cursorPos);
-          return;
-        } else if (active.part === 'den' && dir < 0) {
-          this.cursorPos = t.num.end;
-          this.display.renderExpression(this.expression, this.cursorPos);
-          return;
-        }
+        allSlots.push({ template: t, part: 'num', start: t.num.start, end: t.num.end, text: t.num.text });
+        allSlots.push({ template: t, part: 'den', start: t.den.start, end: t.den.end, text: t.den.text });
       } else if (t.type === 'mixedfrac') {
-        if ((active.part === 'whole' || active.part === 'num') && dir > 0) {
-          this.cursorPos = t.den.start;
-          this.display.renderExpression(this.expression, this.cursorPos);
-          return;
-        } else if (active.part === 'den' && dir < 0) {
-          this.cursorPos = t.num.end;
-          this.display.renderExpression(this.expression, this.cursorPos);
-          return;
-        }
-      } else if (t.type === 'pow') {
-        if (dir > 0) {
-          this.cursorPos = t.fullEnd;
-          this.display.renderExpression(this.expression, this.cursorPos);
-          return;
-        }
+        allSlots.push({ template: t, part: 'whole', start: t.whole.start, end: t.whole.end, text: t.whole.text });
+        allSlots.push({ template: t, part: 'num', start: t.num.start, end: t.num.end, text: t.num.text });
+        allSlots.push({ template: t, part: 'den', start: t.den.start, end: t.den.end, text: t.den.text });
       } else if (t.type === 'nthroot') {
-        if (active.part === 'root' && dir > 0) {
-          this.cursorPos = t.rad.start;
-          this.display.renderExpression(this.expression, this.cursorPos);
-          return;
-        } else if (active.part === 'rad' && dir < 0) {
-          this.cursorPos = t.root.end;
-          this.display.renderExpression(this.expression, this.cursorPos);
-          return;
-        }
-      } else if (t.type === 'int') {
-        if (active.part === 'expr') {
-          if (dir < 0) {
-            this.cursorPos = t.upper.start;
-            this.display.renderExpression(this.expression, this.cursorPos);
-            return;
-          } else if (dir > 0) {
-            this.cursorPos = t.lower.start;
-            this.display.renderExpression(this.expression, this.cursorPos);
-            return;
-          }
-        } else if (active.part === 'lower' && dir < 0) {
-          this.cursorPos = t.upper.start;
-          this.display.renderExpression(this.expression, this.cursorPos);
-          return;
-        } else if (active.part === 'upper' && dir > 0) {
-          this.cursorPos = t.lower.start;
-          this.display.renderExpression(this.expression, this.cursorPos);
-          return;
-        }
-      } else if (t.type === 'sum') {
-        if (active.part === 'expr') {
-          if (dir < 0) {
-            this.cursorPos = t.upper.start;
-            this.display.renderExpression(this.expression, this.cursorPos);
-            return;
-          } else if (dir > 0) {
-            this.cursorPos = t.lower.start;
-            this.display.renderExpression(this.expression, this.cursorPos);
-            return;
-          }
-        } else if (active.part === 'lower' && dir < 0) {
-          this.cursorPos = t.upper.start;
-          this.display.renderExpression(this.expression, this.cursorPos);
-          return;
-        } else if (active.part === 'upper' && dir > 0) {
-          this.cursorPos = t.lower.start;
-          this.display.renderExpression(this.expression, this.cursorPos);
-          return;
-        }
+        allSlots.push({ template: t, part: 'root', start: t.root.start, end: t.root.end, text: t.root.text });
+        allSlots.push({ template: t, part: 'rad', start: t.rad.start, end: t.rad.end, text: t.rad.text });
+      } else if (t.type === 'int' || t.type === 'sum') {
+        allSlots.push({ template: t, part: 'upper', start: t.upper.start, end: t.upper.end, text: t.upper.text });
+        allSlots.push({ template: t, part: 'expr', start: t.expr.start, end: t.expr.end, text: t.expr.text });
+        allSlots.push({ template: t, part: 'lower', start: t.lower.start, end: t.lower.end, text: t.lower.text });
+      } else if (t.type === 'diff') {
+        allSlots.push({ template: t, part: 'expr', start: t.expr.start, end: t.expr.end, text: t.expr.text });
+        allSlots.push({ template: t, part: 'point', start: t.point.start, end: t.point.end, text: t.point.text });
       } else if (t.type === 'logbase') {
-        if (active.part === 'base' && dir < 0) {
-          this.cursorPos = t.expr.start;
-          this.display.renderExpression(this.expression, this.cursorPos);
-          return;
-        } else if (active.part === 'expr' && dir > 0) {
-          this.cursorPos = t.base.start;
+        allSlots.push({ template: t, part: 'base', start: t.base.start, end: t.base.end, text: t.base.text });
+        allSlots.push({ template: t, part: 'expr', start: t.expr.start, end: t.expr.end, text: t.expr.text });
+      } else if (t.type === 'pow') {
+        allSlots.push({ template: t, part: 'exp', start: t.exp.start, end: t.exp.end, text: t.exp.text });
+      }
+    }
+    const leafs = [];
+    for (let i = 0; i < allSlots.length; i++) {
+      const s = allSlots[i];
+      let containsOther = false;
+      for (let j = 0; j < allSlots.length; j++) {
+        if (i !== j) {
+          const o = allSlots[j];
+          if (o.start >= s.start && o.end <= s.end && (o.start > s.start || o.end < s.end)) {
+            containsOther = true;
+            break;
+          }
+        }
+      }
+      if (!containsOther) leafs.push(s);
+    }
+    leafs.sort((a, b) => a.start - b.start);
+    return leafs;
+  }
+
+  getVerticalSlotsForCursor(expr, cursorPos) {
+    const templates = this.parseTemplates(expr);
+    if (!templates || templates.length === 0) return [];
+
+    const roots = [];
+    for (const t of templates) {
+      let isChild = false;
+      for (const parent of templates) {
+        if (parent !== t && t.fullStart >= parent.fullStart && t.fullEnd <= parent.fullEnd) {
+          isChild = true;
+          break;
+        }
+      }
+      if (!isChild) roots.push(t);
+    }
+
+    let currentRoot = null;
+    for (const r of roots) {
+      if (cursorPos >= r.fullStart && cursorPos <= r.fullEnd) {
+        currentRoot = r;
+        break;
+      }
+    }
+    if (!currentRoot) return [];
+
+    const allLeafs = this.getLeafSlots(expr);
+    return allLeafs.filter(l => l.start >= currentRoot.fullStart && l.end <= currentRoot.fullEnd);
+  }
+
+  navigateVertical(dir) {
+    const vSlots = this.getVerticalSlotsForCursor(this.expression, this.cursorPos);
+    if (vSlots && vSlots.length > 1) {
+      let curIdx = -1;
+      for (let i = 0; i < vSlots.length; i++) {
+        const s = vSlots[i];
+        if (this.cursorPos >= s.start && this.cursorPos <= s.end) {
+          curIdx = i;
+          break;
+        }
+      }
+      if (curIdx === -1) {
+        let minDist = Infinity;
+        for (let i = 0; i < vSlots.length; i++) {
+          const s = vSlots[i];
+          const dist = Math.min(Math.abs(this.cursorPos - s.start), Math.abs(this.cursorPos - s.end));
+          if (dist < minDist) {
+            minDist = dist;
+            curIdx = i;
+          }
+        }
+      }
+
+      if (curIdx !== -1) {
+        const targetIdx = curIdx + dir;
+        if (targetIdx >= 0 && targetIdx < vSlots.length) {
+          this.cursorPos = vSlots[targetIdx].start;
           this.display.renderExpression(this.expression, this.cursorPos);
           return;
         }
       }
     }
+
+    // Exponent exit: if inside pow and pressing DOWN, exit exponent
+    const active = this.findActiveSlot(this.expression, this.cursorPos);
+    if (active && active.template.type === 'pow' && dir > 0) {
+      this.cursorPos = active.template.fullEnd;
+      this.display.renderExpression(this.expression, this.cursorPos);
+      return;
+    }
+
     this.navigateHistory(dir);
   }
 
@@ -8569,6 +8598,7 @@ class CasioApp {
     this.historyIndex = this.history.length;
     this.justCalculated = true;
     this.display.setScrollArrows(true, false);
+    this.display.updateScrollArrows();
   }
 
   handleSD() {
@@ -9308,7 +9338,7 @@ if (document.readyState === 'loading') {
  * Implements Zoom, Pop-up Display (Real-time Mirror), Screen Capture, and Key Logging.
  */
 
-window.CASIO_BUILD_VERSION = 'v2.5.2 (2026-09-20)';
+window.CASIO_BUILD_VERSION = 'v2.5.3 (2026-09-20)';
 
 (function() {
   class EmulatorUI {
