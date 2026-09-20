@@ -1076,7 +1076,7 @@
       display: flex;
       align-items: center;
       gap: 2px;
-      padding: 2px 6px;
+      padding: 2px 4px;
       background: #f6f6f6;
       height: 32px;
       overflow-x: auto;
@@ -1088,8 +1088,8 @@
       display: none;
     }
     .tb-btn {
-      width: 28px;
-      height: 26px;
+      width: 25px;
+      height: 25px;
       display: flex;
       justify-content: center;
       align-items: center;
@@ -1098,10 +1098,36 @@
       border-radius: 2px;
       cursor: pointer;
       color: #333;
+      padding: 0;
+      flex-shrink: 0;
     }
     .tb-btn:hover {
       background: #e5e5e5;
       border-color: #c5c5c5;
+    }
+    .tb-btn-update {
+      width: auto !important;
+      padding: 0 5px;
+      gap: 3px;
+      color: #0066cc;
+      font-weight: 600;
+      font-size: 11px;
+      background: rgba(0, 102, 204, 0.08);
+      border: 1px solid rgba(0, 102, 204, 0.3);
+      border-radius: 4px;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      flex-shrink: 0;
+      height: 25px;
+    }
+    .tb-btn-update:hover, .tb-btn-update:active {
+      background: rgba(0, 102, 204, 0.18);
+      border-color: #0066cc;
+      color: #0052a3;
+    }
+    .tb-btn-update svg {
+      flex-shrink: 0;
     }
     .tb-btn.active {
       background: #d8d8d8;
@@ -1109,19 +1135,22 @@
     }
     .tb-separator {
       width: 1px;
-      height: 18px;
+      height: 16px;
       background: #ccc;
-      margin: 0 4px;
+      margin: 0 1.5px;
+      flex-shrink: 0;
     }
     .tb-zoom-select {
       height: 22px;
       font-size: 11px;
-      padding: 0 4px;
+      padding: 0 1px;
       border: 1px solid #ccc;
       border-radius: 2px;
       background: #fff;
       color: #333;
       cursor: pointer;
+      flex-shrink: 0;
+      max-width: 46px;
     }
     .emulator-app {
       width: 100%;
@@ -1393,6 +1422,34 @@
       transform: translateX(-50%) translateY(0);
       opacity: 1;
     }
+  
+    @media (max-width: 480px) {
+      #tb-btn-app-mode {
+        display: none;
+      }
+      .emulator-toolbar {
+        padding: 2px 4px;
+        gap: 2px;
+      }
+      .tb-btn {
+        width: 26px;
+        height: 26px;
+      }
+      .tb-separator {
+        margin: 0 2px;
+      }
+      .tb-zoom-select {
+        height: 22px;
+        padding: 0 1px;
+        font-size: 11px;
+      }
+      .tb-btn-update {
+        padding: 0 6px;
+        font-size: 11.5px;
+        height: 26px;
+      }
+    }
+
   </style>
 </head>
 <body>
@@ -1400,44 +1457,7 @@
   <div class="emulator-app">
     <!-- Top Emulator Header: Title, Menubar, Toolbar -->
     <header class="emulator-header">
-      <div class="emulator-menubar">
-        <div class="menu-item-has-dropdown">
-          <button class="menu-btn">Window</button>
-          <div class="menu-dropdown">
-            <div class="menu-action" id="menu-app-window">Mở cửa sổ App độc lập <span class="menu-shortcut">Ctrl+M</span></div>
-            <div class="menu-divider"></div>
-            <div class="menu-action" id="menu-popup-display">Pop-up Display <span class="menu-shortcut">Ctrl+P</span></div>
-            <div class="menu-divider"></div>
-            <div class="menu-action" id="menu-zoom-in">Phóng to máy tính <span class="menu-shortcut">Ctrl++</span></div>
-            <div class="menu-action" id="menu-zoom-out">Thu nhỏ máy tính <span class="menu-shortcut">Ctrl+-</span></div>
-            <div class="menu-action" id="menu-zoom-100">Kích thước chuẩn (100%) <span class="menu-shortcut">Ctrl+0</span></div>
-            <div class="menu-action" id="menu-zoom-fit">Vừa màn hình (Fit)</div>
-          </div>
-        </div>
-        <div class="menu-item-has-dropdown">
-          <button class="menu-btn">Tools</button>
-          <div class="menu-dropdown">
-            <div class="menu-action" id="menu-capture-lcd">Chụp ảnh màn hình LCD <span class="menu-shortcut">Ctrl+S</span></div>
-            <div class="menu-divider"></div>
-            <div class="menu-action" id="menu-keylog">Lịch sử phím (Key Log)</div>
-          </div>
-        </div>
-        <div class="menu-item-has-dropdown">
-          <button class="menu-btn">Help</button>
-          <div class="menu-dropdown">
-            <div class="menu-action" id="menu-help-keys">Phím tắt bàn phím</div>
-            <div class="menu-action" id="menu-help-about">Giới thiệu fx-580VN X Emulator</div>
-            <div class="menu-divider"></div>
-            <div class="menu-action" id="menu-help-update">🔄 Cập nhật phiên bản mới</div>
-          </div>
-        </div>
-        <div class="menu-item">
-          <button class="menu-btn" id="menu-btn-hdsd">HDSD</button>
-        </div>
-        <div class="menu-item">
-          <button class="menu-btn" id="menu-btn-update" title="Tải lại / Cập nhật phiên bản mới nhất" style="color:#0066cc;font-weight:600;">🔄 Cập nhật</button>
-        </div>
-      </div>
+      
 
       <div class="emulator-toolbar">
         <button class="tb-btn" id="tb-btn-app-mode" title="Mở dạng cửa sổ App độc lập (App Window - Ctrl+M)">
@@ -1507,6 +1527,15 @@
             <line x1="18" y1="12" x2="18" y2="12"></line>
             <line x1="7" y1="16" x2="17" y2="16"></line>
           </svg>
+        </button>
+        <span class="tb-separator"></span>
+        <button class="tb-btn tb-btn-update" id="tb-btn-update" title="Tải lại / Cập nhật phiên bản mới nhất">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="23 4 23 10 17 10"></polyline>
+            <polyline points="1 20 1 14 7 14"></polyline>
+            <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path>
+          </svg>
+          <span>Cập nhật</span>
         </button>
       </div>
     </header>
@@ -9398,6 +9427,34 @@ if (document.readyState === 'loading') {
     .ext-lcd-screen.no-grid {
       background-image: none !important;
     }
+  
+    @media (max-width: 480px) {
+      #tb-btn-app-mode {
+        display: none;
+      }
+      .emulator-toolbar {
+        padding: 2px 4px;
+        gap: 2px;
+      }
+      .tb-btn {
+        width: 26px;
+        height: 26px;
+      }
+      .tb-separator {
+        margin: 0 2px;
+      }
+      .tb-zoom-select {
+        height: 22px;
+        padding: 0 1px;
+        font-size: 11px;
+      }
+      .tb-btn-update {
+        padding: 0 6px;
+        font-size: 11.5px;
+        height: 26px;
+      }
+    }
+
   </style>
 </head>
 <body>
@@ -9691,7 +9748,35 @@ if (document.readyState === 'loading') {
                   .dialog-title { font-size: 16px; font-weight: bold; margin-bottom: 2px; }
                   .dialog-divider { height: 1px; border-bottom: 1px dashed rgba(0,0,0,0.4); margin: 3px 0 4px 0; }
                   .dialog-row { font-size: 14px; margin-top: 2px; }
-                </style>
+                
+    @media (max-width: 480px) {
+      #tb-btn-app-mode {
+        display: none;
+      }
+      .emulator-toolbar {
+        padding: 2px 4px;
+        gap: 2px;
+      }
+      .tb-btn {
+        width: 26px;
+        height: 26px;
+      }
+      .tb-separator {
+        margin: 0 2px;
+      }
+      .tb-zoom-select {
+        height: 22px;
+        padding: 0 1px;
+        font-size: 11px;
+      }
+      .tb-btn-update {
+        padding: 0 6px;
+        font-size: 11.5px;
+        height: 26px;
+      }
+    }
+
+  </style>
                 ${clone.innerHTML}
               </div>
             </foreignObject>
@@ -10088,6 +10173,17 @@ if (document.readyState === 'loading') {
       const btnKeylog = document.getElementById('tb-btn-keylog');
       if (btnKeylog) {
         btnKeylog.addEventListener('click', () => this.toggleKeylog());
+      }
+
+      // Cập nhật button
+      const btnUpdate = document.getElementById('tb-btn-update');
+      if (btnUpdate) {
+        const runUpdate = (e) => {
+          e.preventDefault();
+          this.forceAppUpdate();
+        };
+        btnUpdate.addEventListener('click', runUpdate);
+        btnUpdate.addEventListener('touchend', runUpdate);
       }
     }
 
