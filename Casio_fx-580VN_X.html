@@ -1494,6 +1494,27 @@
       }
     }
 
+    /* Pop-up Display layout optimizations for iPad, Tablets & Desktops */
+    body.popup-display-open .calc-container {
+      transition: height 0.25s cubic-bezier(0.4, 0, 0.2, 1), 
+                  margin-top 0.25s cubic-bezier(0.4, 0, 0.2, 1), 
+                  transform 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+    /* Portrait on iPad / Tablets & Mobile: Pop-up at top, calc below */
+    @media (max-width: 960px) and (orientation: portrait), (max-aspect-ratio: 1/1) and (max-width: 960px) {
+      body.popup-display-open .calc-container {
+        height: calc(100vh - 295px) !important;
+        max-height: calc(100vh - 295px) !important;
+        margin-top: 260px !important;
+      }
+    }
+    /* Landscape on iPad & Small Screens: Shift calc left, popup right */
+    @media (max-width: 1200px) and (orientation: landscape) and (min-aspect-ratio: 1/1) {
+      body.popup-display-open .calc-container {
+        transform: translateX(-240px) !important;
+      }
+    }
+
   </style>
 </head>
 <body>
@@ -9152,8 +9173,16 @@ window.CASIO_BUILD_VERSION = 'v2.5 (2026-09-20)';
         this.lcdResizeObserver = new ResizeObserver(updateScale);
         this.lcdResizeObserver.observe(this.lcdScreen);
       }
-      window.addEventListener('resize', updateScale);
-      window.addEventListener('orientationchange', () => setTimeout(updateScale, 100));
+      window.addEventListener('resize', () => {
+        updateScale();
+        if (this.isPopupOpen) this.positionPopupDisplay();
+      });
+      window.addEventListener('orientationchange', () => {
+        setTimeout(() => {
+          updateScale();
+          if (this.isPopupOpen) this.positionPopupDisplay();
+        }, 120);
+      });
     }
 
     /* -------------------------------------------------------------------------
@@ -9245,19 +9274,35 @@ window.CASIO_BUILD_VERSION = 'v2.5 (2026-09-20)';
       popup.style.top = `${Math.max(60, rect.top)}px`;
 
       // Events inside Pop-up Display
-      popup.querySelector('#popup-close-btn').addEventListener('click', () => this.togglePopupDisplay(false));
-      popup.querySelector('#popup-detach-btn').addEventListener('click', () => this.openExternalPopupWindow());
-      popup.querySelector('#popup-copy-btn').addEventListener('click', () => this.captureLcdScreen(false));
+      const closePopup = (e) => { if (e) e.preventDefault(); this.togglePopupDisplay(false); };
+      popup.querySelector('#popup-close-btn').addEventListener('click', closePopup);
+      popup.querySelector('#popup-close-btn').addEventListener('touchend', closePopup);
+
+      const detachPopup = (e) => { if (e) e.preventDefault(); this.openExternalPopupWindow(); };
+      popup.querySelector('#popup-detach-btn').addEventListener('click', detachPopup);
+      popup.querySelector('#popup-detach-btn').addEventListener('touchend', detachPopup);
+
+      const copyPopup = (e) => { if (e) e.preventDefault(); this.captureLcdScreen(false); };
+      popup.querySelector('#popup-copy-btn').addEventListener('click', copyPopup);
+      popup.querySelector('#popup-copy-btn').addEventListener('touchend', copyPopup);
 
       const gridBtn = popup.querySelector('#popup-grid-btn');
-      gridBtn.addEventListener('click', () => {
+      const toggleGrid = (e) => {
+        if (e) e.preventDefault();
         this.hasLcdGrid = !this.hasLcdGrid;
         gridBtn.classList.toggle('active', this.hasLcdGrid);
         this.popupLcdScreen.classList.toggle('no-grid', !this.hasLcdGrid);
-      });
+      };
+      gridBtn.addEventListener('click', toggleGrid);
+      gridBtn.addEventListener('touchend', toggleGrid);
 
-      popup.querySelector('#popup-zoom-in').addEventListener('click', () => this.setPopupZoom(this.popupZoom + 0.15));
-      popup.querySelector('#popup-zoom-out').addEventListener('click', () => this.setPopupZoom(this.popupZoom - 0.15));
+      const zoomInPopup = (e) => { if (e) e.preventDefault(); this.setPopupZoom(this.popupZoom + 0.15); };
+      popup.querySelector('#popup-zoom-in').addEventListener('click', zoomInPopup);
+      popup.querySelector('#popup-zoom-in').addEventListener('touchend', zoomInPopup);
+
+      const zoomOutPopup = (e) => { if (e) e.preventDefault(); this.setPopupZoom(this.popupZoom - 0.15); };
+      popup.querySelector('#popup-zoom-out').addEventListener('click', zoomOutPopup);
+      popup.querySelector('#popup-zoom-out').addEventListener('touchend', zoomOutPopup);
 
       this.makeDraggable(popup, popup.querySelector('#popup-titlebar'));
       this.makeResizable(popup, popup.querySelector('#popup-resize-handle'));
@@ -9314,10 +9359,10 @@ window.CASIO_BUILD_VERSION = 'v2.5 (2026-09-20)';
     }
 
     togglePopupDisplay(forceState) {
-      const isCompactOrApp = window.name === 'CasioFx580App' || window.innerWidth <= 600;
+      const isStandaloneDesktopWin = window.name === 'CasioFx580App' && !('ontouchstart' in window);
 
-      if (isCompactOrApp) {
-        // In standalone app window mode: automatically detach into an independent desktop window!
+      if (isStandaloneDesktopWin) {
+        // In standalone desktop app window mode: detach into an independent desktop window!
         if (this.externalPopupWin && !this.externalPopupWin.closed) {
           if (forceState === false) {
             this.externalPopupWin.close();
@@ -9336,15 +9381,56 @@ window.CASIO_BUILD_VERSION = 'v2.5 (2026-09-20)';
         return;
       }
 
-      // In wide mode: toggle in-page floating window
+      // In wide / iPad / tablet mode: toggle in-page floating/docked window
       this.isPopupOpen = typeof forceState === 'boolean' ? forceState : !this.isPopupOpen;
       this.popupWindow.style.display = this.isPopupOpen ? 'flex' : 'none';
+      document.body.classList.toggle('popup-display-open', this.isPopupOpen);
 
       const btn = document.getElementById('tb-btn-popup');
       if (btn) btn.classList.toggle('active', this.isPopupOpen);
 
       if (this.isPopupOpen) {
+        this.positionPopupDisplay();
         this.syncLcdToPopup();
+      }
+    }
+
+    positionPopupDisplay() {
+      if (!this.popupWindow || !this.isPopupOpen) return;
+      const popup = this.popupWindow;
+      const isPortrait = window.innerHeight > window.innerWidth;
+
+      if (isPortrait && window.innerWidth <= 960) {
+        // iPad / Tablet in Portrait: Dock at top, calculator stays completely visible below
+        const popupW = Math.min(window.innerWidth - 20, Math.max(340, Math.round(window.innerWidth * 0.68)));
+        popup.style.width = `${popupW}px`;
+        popup.style.left = `${Math.round((window.innerWidth - popupW) / 2)}px`;
+        popup.style.top = '36px';
+        const baseW = 384;
+        const scale = (popupW - 24) / baseW;
+        this.setPopupZoom(scale);
+      } else if (!isPortrait && window.innerWidth <= 1200) {
+        // iPad in Landscape: Shift calculator left, popup sits nicely on right
+        const popupW = Math.min(480, Math.round(window.innerWidth * 0.45));
+        popup.style.width = `${popupW}px`;
+        popup.style.left = `${Math.round(window.innerWidth * 0.52)}px`;
+        popup.style.top = '80px';
+        const baseW = 384;
+        const scale = (popupW - 24) / baseW;
+        this.setPopupZoom(scale);
+      } else {
+        // Desktop / Large screen: Place beside the calculator
+        const rect = this.calcContainer.getBoundingClientRect();
+        const baseW = 384;
+        const initialWidth = Math.round(baseW * this.popupZoom + 22);
+        popup.style.width = `${initialWidth}px`;
+        let leftPos = rect.right + 20;
+        if (leftPos + initialWidth > window.innerWidth - 10) {
+          leftPos = Math.max(10, window.innerWidth - initialWidth - 15);
+        }
+        popup.style.left = `${leftPos}px`;
+        popup.style.top = `${Math.max(60, rect.top)}px`;
+        this.updatePopupScale();
       }
     }
 
@@ -9642,67 +9728,142 @@ window.CASIO_BUILD_VERSION = 'v2.5 (2026-09-20)';
       let isDragging = false;
       let startX, startY, origX, origY;
 
-      const onMouseDown = (e) => {
-        if (e.target.closest('.win-btn') || e.target.closest('.popup-tool-btn')) return;
+      const startDrag = (clientX, clientY, target) => {
+        if (target.closest('.win-btn') || target.closest('.popup-tool-btn')) return false;
         isDragging = true;
-        startX = e.clientX;
-        startY = e.clientY;
+        startX = clientX;
+        startY = clientY;
         const rect = element.getBoundingClientRect();
         origX = rect.left;
         origY = rect.top;
+        return true;
+      };
+
+      const moveDrag = (clientX, clientY) => {
+        if (!isDragging) return;
+        const dx = clientX - startX;
+        const dy = clientY - startY;
+        const maxL = window.innerWidth - element.offsetWidth;
+        const maxT = window.innerHeight - 40;
+        element.style.left = `${Math.max(0, Math.min(maxL, origX + dx))}px`;
+        element.style.top = `${Math.max(30, Math.min(maxT, origY + dy))}px`;
+      };
+
+      const stopDrag = () => {
+        isDragging = false;
+        document.removeEventListener('mousemove', onMouseMove);
+        document.removeEventListener('mouseup', onMouseUp);
+        document.removeEventListener('touchmove', onTouchMove);
+        document.removeEventListener('touchend', onTouchEnd);
+        document.removeEventListener('touchcancel', onTouchEnd);
+      };
+
+      const onMouseDown = (e) => {
+        if (!startDrag(e.clientX, e.clientY, e.target)) return;
         document.addEventListener('mousemove', onMouseMove);
         document.addEventListener('mouseup', onMouseUp);
         e.preventDefault();
       };
 
       const onMouseMove = (e) => {
-        if (!isDragging) return;
-        const dx = e.clientX - startX;
-        const dy = e.clientY - startY;
-        element.style.left = `${Math.max(0, origX + dx)}px`;
-        element.style.top = `${Math.max(0, origY + dy)}px`;
+        moveDrag(e.clientX, e.clientY);
       };
 
       const onMouseUp = () => {
-        isDragging = false;
-        document.removeEventListener('mousemove', onMouseMove);
-        document.removeEventListener('mouseup', onMouseUp);
+        stopDrag();
+      };
+
+      const onTouchStart = (e) => {
+        const touch = e.touches[0];
+        if (!touch || !startDrag(touch.clientX, touch.clientY, e.target)) return;
+        document.addEventListener('touchmove', onTouchMove, { passive: false });
+        document.addEventListener('touchend', onTouchEnd);
+        document.addEventListener('touchcancel', onTouchEnd);
+      };
+
+      const onTouchMove = (e) => {
+        if (!isDragging) return;
+        const touch = e.touches[0];
+        if (!touch) return;
+        e.preventDefault();
+        moveDrag(touch.clientX, touch.clientY);
+      };
+
+      const onTouchEnd = () => {
+        stopDrag();
       };
 
       handle.addEventListener('mousedown', onMouseDown);
+      handle.addEventListener('touchstart', onTouchStart, { passive: false });
     }
 
     makeResizable(element, handle) {
       let isResizing = false;
       let startX, startY, startW;
 
-      const onMouseDown = (e) => {
+      const startResize = (clientX, clientY) => {
         isResizing = true;
-        startX = e.clientX;
-        startY = e.clientY;
+        startX = clientX;
+        startY = clientY;
         startW = element.offsetWidth;
+      };
+
+      const moveResize = (clientX) => {
+        if (!isResizing) return;
+        const dx = clientX - startX;
+        const newW = Math.max(300, startW + dx);
+        const baseW = 384;
+        const newZoom = (newW - 24) / baseW;
+        this.setPopupZoom(newZoom);
+      };
+
+      const stopResize = () => {
+        isResizing = false;
+        document.removeEventListener('mousemove', onMouseMove);
+        document.removeEventListener('mouseup', onMouseUp);
+        document.removeEventListener('touchmove', onTouchMove);
+        document.removeEventListener('touchend', onTouchEnd);
+        document.removeEventListener('touchcancel', onTouchEnd);
+      };
+
+      const onMouseDown = (e) => {
+        startResize(e.clientX, e.clientY);
         document.addEventListener('mousemove', onMouseMove);
         document.addEventListener('mouseup', onMouseUp);
         e.preventDefault();
       };
 
       const onMouseMove = (e) => {
-        if (!isResizing) return;
-        const dx = e.clientX - startX;
-        const newW = Math.max(300, startW + dx);
-        // Compute new zoom based on width
-        const baseW = 384;
-        const newZoom = (newW - 24) / baseW;
-        this.setPopupZoom(newZoom);
+        moveResize(e.clientX);
       };
 
       const onMouseUp = () => {
-        isResizing = false;
-        document.removeEventListener('mousemove', onMouseMove);
-        document.removeEventListener('mouseup', onMouseUp);
+        stopResize();
+      };
+
+      const onTouchStart = (e) => {
+        const touch = e.touches[0];
+        if (!touch) return;
+        startResize(touch.clientX, touch.clientY);
+        document.addEventListener('touchmove', onTouchMove, { passive: false });
+        document.addEventListener('touchend', onTouchEnd);
+        document.addEventListener('touchcancel', onTouchEnd);
+      };
+
+      const onTouchMove = (e) => {
+        if (!isResizing) return;
+        const touch = e.touches[0];
+        if (!touch) return;
+        e.preventDefault();
+        moveResize(touch.clientX);
+      };
+
+      const onTouchEnd = () => {
+        stopResize();
       };
 
       handle.addEventListener('mousedown', onMouseDown);
+      handle.addEventListener('touchstart', onTouchStart, { passive: false });
     }
 
     /* -------------------------------------------------------------------------
