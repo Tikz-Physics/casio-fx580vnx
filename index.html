@@ -894,73 +894,6 @@
       flex-shrink: 0;
       padding-top: env(safe-area-inset-top, 0px);
     }
-    .emulator-menubar {
-      display: flex;
-      align-items: center;
-      padding: 1px 4px;
-      font-size: 12px;
-      background: #fff;
-      border-bottom: 1px solid #e5e5e5;
-      overflow-x: auto;
-      white-space: nowrap;
-      -webkit-overflow-scrolling: touch;
-      scrollbar-width: none;
-    }
-    .emulator-menubar::-webkit-scrollbar {
-      display: none;
-    }
-    .menu-item, .menu-item-has-dropdown {
-      position: relative;
-    }
-    .menu-btn {
-      background: none;
-      border: none;
-      padding: 6px 12px;
-      font-size: 13px;
-      font-weight: 500;
-      color: #333;
-      cursor: pointer;
-      border-radius: 4px;
-      font-family: inherit;
-      min-height: 32px;
-      display: inline-flex;
-      align-items: center;
-      touch-action: manipulation;
-    }
-    .menu-btn:hover, .menu-btn:active {
-      background: #e5e5e5;
-    }
-    .menu-dropdown {
-      display: none;
-      position: absolute;
-      top: 100%;
-      left: 0;
-      background: #fff;
-      border: 1px solid #ccc;
-      box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-      border-radius: 4px;
-      min-width: 230px;
-      z-index: 2000;
-      padding: 4px 0;
-    }
-    .menu-dropdown.open {
-      display: block;
-    }
-    .menu-action {
-      padding: 8px 16px 8px 12px;
-      font-size: 13px;
-      color: #222;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      cursor: pointer;
-      min-height: 36px;
-      touch-action: manipulation;
-    }
-    .menu-action:hover, .menu-action:active {
-      background: #0078d7;
-      color: #fff;
-    }
 
     /* In-app Modal Dialog (100% Mobile & iPad Friendly) */
     .emulator-modal-overlay {
@@ -1642,7 +1575,7 @@
         <!-- Authentic 2x4 ClassWiz Menu -->
         <div class="classwiz-menu-overlay" id="classwiz-menu-overlay">
           <div class="menu-header-bar">
-            <span class="menu-page-arrow" id="menu-page-arrow">?</span>
+            <span class="menu-page-arrow" id="menu-page-arrow">▼</span>
           </div>
           <div class="menu-grid-2x4" id="menu-grid-2x4"></div>
           <div class="menu-divider-line"></div>
@@ -1653,7 +1586,7 @@
         <div class="classwiz-list-overlay" id="classwiz-list-overlay">
           <div class="list-title-bar">
             <span id="list-title-text">SETUP</span>
-            <span id="list-arrows-indicator">?</span>
+            <span id="list-arrows-indicator">▲▼</span>
           </div>
           <div class="list-items-container" id="list-items-container"></div>
         </div>
@@ -9119,7 +9052,7 @@ if (document.readyState === 'loading') {
  * Implements Zoom, Pop-up Display (Real-time Mirror), Screen Capture, and Key Logging.
  */
 
-window.CASIO_BUILD_VERSION = 'v2.5 (2026-09-20)';
+window.CASIO_BUILD_VERSION = 'v2.5.1 (2026-09-20)';
 
 (function() {
   class EmulatorUI {
@@ -9144,10 +9077,10 @@ window.CASIO_BUILD_VERSION = 'v2.5 (2026-09-20)';
     }
 
     init() {
+      this.createModalElement();
       this.createPopupDisplay();
       this.createKeylogPanel();
       this.createToastElement();
-      this.setupMenuBarEvents();
       this.setupToolbarEvents();
       this.setupKeyboardShortcuts();
       this.setupRealtimeMirror();
@@ -9170,13 +9103,25 @@ window.CASIO_BUILD_VERSION = 'v2.5 (2026-09-20)';
 
       updateScale();
       if (window.ResizeObserver && this.lcdScreen) {
-        this.lcdResizeObserver = new ResizeObserver(updateScale);
+        this.lcdResizeObserver = new ResizeObserver(() => {
+          if (!this._resizeRaf) {
+            this._resizeRaf = requestAnimationFrame(() => {
+              this._resizeRaf = null;
+              updateScale();
+            });
+          }
+        });
         this.lcdResizeObserver.observe(this.lcdScreen);
       }
       window.addEventListener('resize', () => {
-        updateScale();
-        if (this.isPopupOpen) this.positionPopupDisplay();
-      });
+        if (!this._resizeRaf) {
+          this._resizeRaf = requestAnimationFrame(() => {
+            this._resizeRaf = null;
+            updateScale();
+            if (this.isPopupOpen) this.positionPopupDisplay();
+          });
+        }
+      }, { passive: true });
       window.addEventListener('orientationchange', () => {
         setTimeout(() => {
           updateScale();
@@ -9561,33 +9506,6 @@ window.CASIO_BUILD_VERSION = 'v2.5 (2026-09-20)';
       background-image: none !important;
     }
   
-    @media (max-width: 480px) {
-      #tb-btn-app-mode {
-        display: none;
-      }
-      .emulator-toolbar {
-        padding: 2px 4px;
-        gap: 2px;
-      }
-      .tb-btn {
-        width: 26px;
-        height: 26px;
-      }
-      .tb-separator {
-        margin: 0 2px;
-      }
-      .tb-zoom-select {
-        height: 22px;
-        padding: 0 1px;
-        font-size: 11px;
-      }
-      .tb-btn-update {
-        padding: 0 6px;
-        font-size: 11.5px;
-        height: 26px;
-      }
-    }
-
   </style>
 </head>
 <body>
@@ -9919,6 +9837,15 @@ window.CASIO_BUILD_VERSION = 'v2.5 (2026-09-20)';
               if (cloneBar) cloneBar.style.display = 'flex';
             }
 
+            let fontDef = '';
+            try {
+              const styleEl = document.querySelector('style');
+              if (styleEl) {
+                const m = styleEl.textContent.match(/@font-face\s*\{[\s\S]*?\}/);
+                if (m) fontDef = m[0];
+              }
+            } catch (e) {}
+
             const svgString = `
           <svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}">
             <foreignObject width="100%" height="100%">
@@ -9956,35 +9883,7 @@ window.CASIO_BUILD_VERSION = 'v2.5 (2026-09-20)';
                   .dialog-title { font-size: 16px; font-weight: bold; margin-bottom: 2px; }
                   .dialog-divider { height: 1px; border-bottom: 1px dashed rgba(0,0,0,0.4); margin: 3px 0 4px 0; }
                   .dialog-row { font-size: 14px; margin-top: 2px; }
-                
-    @media (max-width: 480px) {
-      #tb-btn-app-mode {
-        display: none;
-      }
-      .emulator-toolbar {
-        padding: 2px 4px;
-        gap: 2px;
-      }
-      .tb-btn {
-        width: 26px;
-        height: 26px;
-      }
-      .tb-separator {
-        margin: 0 2px;
-      }
-      .tb-zoom-select {
-        height: 22px;
-        padding: 0 1px;
-        font-size: 11px;
-      }
-      .tb-btn-update {
-        padding: 0 6px;
-        font-size: 11.5px;
-        height: 26px;
-      }
-    }
-
-  </style>
+                </style>
                 ${clone.innerHTML}
               </div>
             </foreignObject>
@@ -10247,95 +10146,6 @@ window.CASIO_BUILD_VERSION = 'v2.5 (2026-09-20)';
       if (modal) modal.classList.add('visible');
     }
 
-    setupMenuBarEvents() {
-      this.createModalElement();
-
-      const closeAllDropdowns = () => {
-        document.querySelectorAll('.menu-dropdown').forEach(d => d.classList.remove('open'));
-      };
-
-      // Dropdown menu toggle with touch & click support
-      document.querySelectorAll('.menu-item-has-dropdown').forEach(item => {
-        const btn = item.querySelector('.menu-btn');
-        const dropdown = item.querySelector('.menu-dropdown');
-
-        const toggleDropdown = (e) => {
-          e.preventDefault();
-          e.stopPropagation();
-          const isOpen = dropdown.classList.contains('open');
-          closeAllDropdowns();
-          if (!isOpen) dropdown.classList.add('open');
-        };
-
-        btn.addEventListener('click', toggleDropdown);
-        btn.addEventListener('touchend', toggleDropdown);
-      });
-
-      // Close when clicking or touching outside
-      const handleOutside = (e) => {
-        if (!e.target.closest('.menu-item-has-dropdown')) {
-          closeAllDropdowns();
-        }
-      };
-      document.addEventListener('click', handleOutside);
-      document.addEventListener('touchstart', handleOutside, { passive: true });
-
-      // Actions in menus
-      const actionMap = {
-        'menu-app-window': () => this.openAppWindow(),
-        'menu-popup-display': () => this.togglePopupDisplay(),
-        'menu-zoom-in': () => this.zoomIn(),
-        'menu-zoom-out': () => this.zoomOut(),
-        'menu-zoom-100': () => this.applyZoom(1.0),
-        'menu-zoom-fit': () => this.applyZoom('fit'),
-        'menu-capture-lcd': () => this.captureLcdScreen(),
-        'menu-keylog': () => this.toggleKeylog(),
-        'menu-help-keys': () => this.showHelpModal(),
-        'menu-help-about': () => this.showAboutModal(),
-        'menu-help-update': () => this.checkForAppUpdate()
-      };
-
-      Object.entries(actionMap).forEach(([id, handler]) => {
-        const el = document.getElementById(id);
-        if (el) {
-          const runAction = (e) => {
-            e.preventDefault();
-            e.stopPropagation();
-            closeAllDropdowns();
-            handler();
-          };
-          el.addEventListener('click', runAction);
-          el.addEventListener('touchend', runAction);
-        }
-      });
-
-      // HDSD button
-      const btnHdsd = document.getElementById('menu-btn-hdsd');
-      if (btnHdsd) {
-        const runHdsd = (e) => {
-          e.preventDefault();
-          e.stopPropagation();
-          closeAllDropdowns();
-          this.showHdsdModal();
-        };
-        btnHdsd.addEventListener('click', runHdsd);
-        btnHdsd.addEventListener('touchend', runHdsd);
-      }
-
-      // Update button on Menubar
-      const btnUpdate = document.getElementById('menu-btn-update');
-      if (btnUpdate) {
-        const runUpdate = (e) => {
-          e.preventDefault();
-          e.stopPropagation();
-          closeAllDropdowns();
-          this.checkForAppUpdate();
-        };
-        btnUpdate.addEventListener('click', runUpdate);
-        btnUpdate.addEventListener('touchend', runUpdate);
-      }
-    }
-
     setupToolbarEvents() {
       // 0. App Window Mode button
       const btnAppMode = document.getElementById('tb-btn-app-mode');
@@ -10401,6 +10211,11 @@ window.CASIO_BUILD_VERSION = 'v2.5 (2026-09-20)';
 
     setupKeyboardShortcuts() {
       window.addEventListener('keydown', (e) => {
+        if (e.key === 'F1') {
+          e.preventDefault();
+          this.showHelpModal();
+          return;
+        }
         if (e.ctrlKey || e.metaKey) {
           if (e.key === '=' || e.key === '+') {
             e.preventDefault();
@@ -10420,6 +10235,9 @@ window.CASIO_BUILD_VERSION = 'v2.5 (2026-09-20)';
           } else if (e.key.toLowerCase() === 'm') {
             e.preventDefault();
             this.openAppWindow();
+          } else if (e.key.toLowerCase() === 'h') {
+            e.preventDefault();
+            this.showHdsdModal();
           }
         }
       });
