@@ -1427,10 +1427,15 @@
           <div class="menu-dropdown">
             <div class="menu-action" id="menu-help-keys">Phím tắt bàn phím</div>
             <div class="menu-action" id="menu-help-about">Giới thiệu fx-580VN X Emulator</div>
+            <div class="menu-divider"></div>
+            <div class="menu-action" id="menu-help-update">🔄 Cập nhật phiên bản mới</div>
           </div>
         </div>
         <div class="menu-item">
           <button class="menu-btn" id="menu-btn-hdsd">HDSD</button>
+        </div>
+        <div class="menu-item">
+          <button class="menu-btn" id="menu-btn-update" title="Tải lại / Cập nhật phiên bản mới nhất" style="color:#0066cc;font-weight:600;">🔄 Cập nhật</button>
         </div>
       </div>
 
@@ -9993,7 +9998,8 @@ if (document.readyState === 'loading') {
         'menu-capture-lcd': () => this.captureLcdScreen(),
         'menu-keylog': () => this.toggleKeylog(),
         'menu-help-keys': () => this.showHelpModal(),
-        'menu-help-about': () => this.showAboutModal()
+        'menu-help-about': () => this.showAboutModal(),
+        'menu-help-update': () => this.forceAppUpdate()
       };
 
       Object.entries(actionMap).forEach(([id, handler]) => {
@@ -10021,6 +10027,19 @@ if (document.readyState === 'loading') {
         };
         btnHdsd.addEventListener('click', runHdsd);
         btnHdsd.addEventListener('touchend', runHdsd);
+      }
+
+      // Update button on Menubar
+      const btnUpdate = document.getElementById('menu-btn-update');
+      if (btnUpdate) {
+        const runUpdate = (e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          closeAllDropdowns();
+          this.forceAppUpdate();
+        };
+        btnUpdate.addEventListener('click', runUpdate);
+        btnUpdate.addEventListener('touchend', runUpdate);
       }
     }
 
@@ -10157,6 +10176,14 @@ if (document.readyState === 'loading') {
         </ul>
         <p style="font-size: 12px; color: #777; margin-bottom: 0;">Phát triển phục vụ Giảng dạy & Học tập Toán - Vật lý.</p>`
       );
+    }
+
+    forceAppUpdate() {
+      this.showToast('🔄 Đang tải phiên bản mới nhất...', 2000);
+      setTimeout(() => {
+        const cleanUrl = window.location.origin + window.location.pathname;
+        window.location.href = cleanUrl + '?v=' + Date.now();
+      }, 300);
     }
 
     showHdsdModal() {
