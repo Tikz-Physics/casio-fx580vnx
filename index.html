@@ -64,13 +64,12 @@
       touch-action: manipulation;
     }
     html, body {
-      background: #111215;
+      margin: 0;
+      padding: 0;
       width: 100%;
       height: 100%;
       overflow: hidden;
-      display: flex;
-      justify-content: center;
-      align-items: center;
+      background: #f0f2f5;
       font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
     }
 
@@ -82,10 +81,14 @@
       display: flex;
       justify-content: center;
       align-items: center;
-      overflow: hidden;
+      overflow: visible;
       box-sizing: border-box;
       min-width: 0;
       min-height: 0;
+      max-height: 100%;
+      max-width: 100%;
+      filter: drop-shadow(0 14px 32px rgba(0, 0, 0, 0.16)) drop-shadow(0 2px 8px rgba(0, 0, 0, 0.06));
+      transition: transform 0.15s ease;
     }
     @media (min-aspect-ratio: 644/1250) {
       .calc-container {
@@ -97,7 +100,7 @@
     }
     @media (max-aspect-ratio: 644/1250) {
       .calc-container {
-        width: 100%;
+        width: calc(100% - 12px);
         height: auto;
         max-width: 100%;
         max-height: 100%;
@@ -875,19 +878,21 @@
       display: flex;
       flex-direction: column;
       overflow: hidden;
-      background: #18191c;
+      background: #f0f2f5;
     }
     .emulator-header {
       width: 100%;
       max-width: 100vw;
-      background: #f1f1f1;
-      border-bottom: 1px solid #d4d4d4;
+      background: #ffffff;
+      border-bottom: 1px solid #e2e5e9;
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
       display: flex;
       flex-direction: column;
       user-select: none;
       z-index: 1000;
       overflow: hidden;
       flex-shrink: 0;
+      padding-top: env(safe-area-inset-top, 0px);
     }
     .emulator-menubar {
       display: flex;
@@ -1154,22 +1159,23 @@
     }
     .emulator-app {
       width: 100%;
-      max-width: 440px;
+      max-width: 100vw;
       height: 100vh;
       max-height: 100%;
       display: flex;
       flex-direction: column;
-      background: #202226;
-      box-shadow: 0 10px 40px rgba(0,0,0,0.8), 0 0 0 1px rgba(255,255,255,0.08);
+      background: #f0f2f5;
       overflow: hidden;
-      margin: 0 auto;
+      margin: 0;
       position: relative;
     }
     .emulator-header {
       flex-shrink: 0;
       width: 100%;
       background: #fff;
-      border-bottom: 1px solid #ddd;
+      border-bottom: 1px solid #e2e5e9;
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+      padding-top: env(safe-area-inset-top, 0px);
     }
     .emulator-workspace {
       flex: 1;
@@ -1181,7 +1187,10 @@
       align-items: center;
       overflow: hidden;
       position: relative;
-      background: #18191c;
+      background: #f0f2f5;
+      padding: 6px 8px;
+      box-sizing: border-box;
+      padding-bottom: max(6px, env(safe-area-inset-bottom, 0px));
     }
 
     /* Slim Mode */
