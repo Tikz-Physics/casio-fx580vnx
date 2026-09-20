@@ -277,6 +277,7 @@
       max-height: 42%;
       font-size: calc(13px * var(--lcd-scale, 1));
       align-items: flex-start;
+      padding-top: calc(5px * var(--lcd-scale, 1));
     }
     .view-normal.mode-result .screen-result {
       flex: 1;
@@ -354,12 +355,27 @@
 
     /* Natural math symbols (MathI/MathO) — Casio ClassWiz Authentic */
     .casio-sup {
-      font-size: 0.65em;
-      display: inline-flex;
-      align-items: flex-end;
-      vertical-align: super;
+      font-size: 0.6em;
       line-height: 1;
+      display: inline-block;
+      position: relative;
+      top: -0.5em;
       margin: 0 0.5px;
+      vertical-align: baseline;
+    }
+    .screen-result .casio-sup {
+      font-size: 0.55em;
+      line-height: 1;
+      display: inline-block;
+      position: relative;
+      top: -0.6em;
+      margin: 0 0.5px;
+      vertical-align: baseline;
+    }
+    .screen-result .casio-sci {
+      font-size: calc(18px * var(--lcd-scale, 1));
+      display: inline-flex;
+      align-items: baseline;
     }
     sub, .casio-sub {
       font-size: 0.62em;
@@ -2032,6 +2048,7 @@ class MathEngine {
     if (val === undefined || val === null || typeof val !== 'number' || isNaN(val) || !isFinite(val)) {
       return null;
     }
+    if (Math.abs(val) >= 1e10) return null; // Exceeds 10-digit display, must use scientific notation
     if (Math.abs(val) < 1e-12) return '0';
     const signStr = val < 0 ? '-' : '';
     const x = Math.abs(val);
@@ -3827,7 +3844,7 @@ class CasioDisplay {
       const exp = parseInt(sciMatch[2], 10);
       const expSign = exp < 0 ? '−' : '';
       const absExp = Math.abs(exp);
-      return `${mantissa}×10<span class="casio-sup">${expSign}${absExp}</span>`;
+      return `<span class="casio-sci">${mantissa}×10<span class="casio-sup">${expSign}${absExp}</span></span>`;
     }
 
     // 3. LaTeX / Math formatted expressions
@@ -8846,6 +8863,24 @@ class CasioApp {
     }, 600);
   }
 
+  formatCasioNumber(num) {
+    if (typeof num !== 'number' || isNaN(num) || !isFinite(num)) return String(num);
+    if (num === 0) return '0';
+
+    const absVal = Math.abs(num);
+    if (absVal >= 1e10 || absVal < 1e-2) {
+      let exp = Math.floor(Math.log10(absVal));
+      let mantissa = num / Math.pow(10, exp);
+      mantissa = Number(mantissa.toFixed(9));
+      if (Math.abs(mantissa) >= 10) {
+        mantissa = Number((mantissa / 10).toFixed(9));
+        exp += 1;
+      }
+      return `${mantissa}e${exp >= 0 ? '+' : ''}${exp}`;
+    }
+    return String(Number(num.toPrecision(10)));
+  }
+
   calculate(forceApprox = false) {
     if (!this.expression.trim()) return;
 
@@ -8877,17 +8912,17 @@ class CasioApp {
         this.displayResult = exact;
       } else {
         const frac = this.engine.toFraction(res);
-        if (frac && frac.d !== 1 && Math.abs(frac.d) < 1000) {
+        if (frac && frac.d !== 1 && Math.abs(frac.d) < 1000 && Math.abs(frac.n) < 1e10) {
           this.exactResult = `${frac.n}/${frac.d}`;
           this.displayResult = `${frac.n}/${frac.d}`;
         } else {
-          const decStr = String(Number(res.toFixed(10)));
+          const decStr = this.formatCasioNumber(res);
           this.exactResult = decStr;
           this.displayResult = decStr;
         }
       }
       if (forceApprox) {
-        this.displayResult = String(Number(res.toFixed(10)));
+        this.displayResult = this.formatCasioNumber(res);
       }
     }
 
@@ -8904,7 +8939,7 @@ class CasioApp {
   handleSD() {
     if (this.rawResult === undefined || isNaN(this.rawResult) || typeof this.rawResult === 'string') return;
 
-    const decStr = String(Number(this.rawResult.toFixed(10)));
+    const decStr = this.formatCasioNumber(this.rawResult);
     if (this.exactResult && this.displayResult !== decStr) {
       this.displayResult = decStr;
     } else if (this.exactResult && this.displayResult === decStr) {
@@ -9638,7 +9673,7 @@ if (document.readyState === 'loading') {
  * Implements Zoom, Pop-up Display (Real-time Mirror), Screen Capture, and Key Logging.
  */
 
-window.CASIO_BUILD_VERSION = 'v2.5.7 (2026-09-20)';
+window.CASIO_BUILD_VERSION = 'v2.5.8 (2026-09-20)';
 
 (function() {
   class EmulatorUI {
