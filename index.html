@@ -1044,6 +1044,14 @@
       background: #e5e5e5;
       border-color: #c5c5c5;
     }
+    .tb-btn.sound-muted {
+      color: #888;
+      opacity: 0.7;
+    }
+    .tb-btn.sound-muted:hover {
+      color: #444;
+      opacity: 1;
+    }
     .tb-btn-update {
       width: auto !important;
       padding: 0 5px;
@@ -1524,6 +1532,17 @@
             <line x1="14" y1="12" x2="14" y2="12"></line>
             <line x1="18" y1="12" x2="18" y2="12"></line>
             <line x1="7" y1="16" x2="17" y2="16"></line>
+          </svg>
+        </button>
+        <button class="tb-btn" id="tb-btn-sound" title="Bật / Tắt âm thanh phím bấm (Ctrl+B)">
+          <svg class="icon-sound-on" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon>
+            <path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"></path>
+          </svg>
+          <svg class="icon-sound-off" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display: none;">
+            <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon>
+            <line x1="23" y1="9" x2="17" y2="15"></line>
+            <line x1="17" y1="9" x2="23" y2="15"></line>
           </svg>
         </button>
         <span class="tb-separator"></span>
@@ -3752,7 +3771,11 @@ class CasioApp {
 
     // Audio & tactile
     this.audioCtx = null;
-    this.soundEnabled = true;
+    let savedSound = null;
+    try {
+      savedSound = localStorage.getItem('casio_sound_enabled');
+    } catch (e) {}
+    this.soundEnabled = savedSound !== null ? (savedSound === 'true') : true;
 
     this.init();
   }
@@ -3763,6 +3786,10 @@ class CasioApp {
 
     document.addEventListener('touchstart', () => {}, { passive: true });
     this.bindEvents();
+
+    if (window.emulatorUI && typeof window.emulatorUI.updateSoundButtonUI === 'function') {
+      window.emulatorUI.updateSoundButtonUI(this.soundEnabled);
+    }
   }
 
   playClickSound() {
@@ -3793,6 +3820,20 @@ class CasioApp {
     if ('vibrate' in navigator) navigator.vibrate(10);
   }
 
+  toggleSound(forceState) {
+    this.soundEnabled = forceState !== undefined ? !!forceState : !this.soundEnabled;
+    try {
+      localStorage.setItem('casio_sound_enabled', String(this.soundEnabled));
+    } catch (e) {}
+    if (this.soundEnabled) {
+      this.playClickSound();
+    }
+    if (window.emulatorUI && typeof window.emulatorUI.updateSoundButtonUI === 'function') {
+      window.emulatorUI.updateSoundButtonUI(this.soundEnabled);
+    }
+    return this.soundEnabled;
+  }
+
   bindEvents() {
     document.querySelectorAll('.calc-btn, .casio-key, .key, .dpad-btn').forEach(btn => {
       const handlePress = (e) => {
@@ -3809,24 +3850,33 @@ class CasioApp {
 
     window.addEventListener('keydown', (e) => {
       if (['0','1','2','3','4','5','6','7','8','9'].includes(e.key)) {
+        this.playClickSound();
         this.handleKey(e.key);
       } else if (['+','-','*','/','(',')'].includes(e.key)) {
+        this.playClickSound();
         const map = { '+': 'add', '-': 'sub', '*': 'mul', '/': 'div', '(': 'open_paren', ')': 'close_paren' };
         this.handleKey(map[e.key] || e.key);
       } else if (e.key === 'Enter' || e.key === '=') {
         e.preventDefault();
+        this.playClickSound();
         this.handleKey('EQUALS');
       } else if (e.key === 'Backspace') {
+        this.playClickSound();
         this.handleKey('DEL');
       } else if (e.key === 'Escape') {
+        this.playClickSound();
         this.handleKey('AC');
       } else if (e.key === 'ArrowLeft') {
+        this.playClickSound();
         this.handleKey('LEFT');
       } else if (e.key === 'ArrowRight') {
+        this.playClickSound();
         this.handleKey('RIGHT');
       } else if (e.key === 'ArrowUp') {
+        this.playClickSound();
         this.handleKey('UP');
       } else if (e.key === 'ArrowDown') {
+        this.playClickSound();
         this.handleKey('DOWN');
       }
     });
@@ -10193,6 +10243,27 @@ window.CASIO_BUILD_VERSION = 'v2.5.1 (2026-09-20)';
         btnKeylog.addEventListener('click', () => this.toggleKeylog());
       }
 
+      // 6. Sound toggle button
+      const btnSound = document.getElementById('tb-btn-sound');
+      if (btnSound) {
+        const toggle = (e) => {
+          if (e) {
+            e.preventDefault();
+            e.stopPropagation();
+          }
+          if (window.casioApp) {
+            const newState = window.casioApp.toggleSound();
+            this.showToast(newState ? '🔊 Đã bật âm thanh phím bấm' : '🔇 Đã tắt âm thanh phím bấm', 1800);
+          }
+        };
+        btnSound.addEventListener('click', toggle);
+        btnSound.addEventListener('touchend', toggle);
+
+        if (window.casioApp) {
+          this.updateSoundButtonUI(window.casioApp.soundEnabled);
+        }
+      }
+
       // Cập nhật button
       const btnUpdate = document.getElementById('tb-btn-update');
       if (btnUpdate) {
@@ -10207,6 +10278,17 @@ window.CASIO_BUILD_VERSION = 'v2.5.1 (2026-09-20)';
         btnUpdate.addEventListener('click', runUpdate);
         btnUpdate.addEventListener('touchend', runUpdate);
       }
+    }
+
+    updateSoundButtonUI(enabled) {
+      const btnSound = document.getElementById('tb-btn-sound');
+      if (!btnSound) return;
+      btnSound.classList.toggle('sound-muted', !enabled);
+      btnSound.title = enabled ? 'Tắt âm thanh phím bấm (Sound: Đang BẬT - Bấm để Tắt)' : 'Bật âm thanh phím bấm (Sound: Đang TẮT - Bấm để Bật)';
+      const iconOn = btnSound.querySelector('.icon-sound-on');
+      const iconOff = btnSound.querySelector('.icon-sound-off');
+      if (iconOn) iconOn.style.display = enabled ? 'inline-block' : 'none';
+      if (iconOff) iconOff.style.display = enabled ? 'none' : 'inline-block';
     }
 
     setupKeyboardShortcuts() {
@@ -10235,6 +10317,12 @@ window.CASIO_BUILD_VERSION = 'v2.5.1 (2026-09-20)';
           } else if (e.key.toLowerCase() === 'm') {
             e.preventDefault();
             this.openAppWindow();
+          } else if (e.key.toLowerCase() === 'b') {
+            e.preventDefault();
+            if (window.casioApp) {
+              const newState = window.casioApp.toggleSound();
+              this.showToast(newState ? '🔊 Đã bật âm thanh phím bấm' : '🔇 Đã tắt âm thanh phím bấm', 1800);
+            }
           } else if (e.key.toLowerCase() === 'h') {
             e.preventDefault();
             this.showHdsdModal();
@@ -10283,8 +10371,10 @@ window.CASIO_BUILD_VERSION = 'v2.5.1 (2026-09-20)';
           <li><b>Phím mũi tên (▲, ▼, ◀, ▶):</b> Điều hướng con trỏ</li>
           <li><b>Ctrl + P:</b> Bật/Tắt màn hình Pop-up Display</li>
           <li><b>Ctrl + S:</b> Chụp ảnh màn hình LCD</li>
+          <li><b>Ctrl + B:</b> Bật / Tắt âm thanh phím bấm</li>
           <li><b>Ctrl + M:</b> Mở cửa sổ App độc lập</li>
           <li><b>Ctrl + / - / 0:</b> Phóng to / Thu nhỏ / Về 100%</li>
+          <li><b>F1:</b> Mở bảng Trợ giúp phím tắt này</li>
         </ul>`
       );
     }
