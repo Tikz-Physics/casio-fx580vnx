@@ -201,7 +201,7 @@
       overflow: visible;
     }
 
-    /* Normal Calculation Screen - Authentic Casio fx-580VN X Display Modes */
+    /* Normal Calculation Screen - Authentic Casio fx-580VN X Fixed 2-Line Baseline */
     .view-normal {
       flex: 1;
       display: flex;
@@ -212,65 +212,7 @@
       position: relative;
     }
 
-    /* Mode: Ready / Standby (AC state before typing) */
-    .view-normal.mode-ready .screen-expression {
-      flex: 0 0 auto;
-      min-height: calc(18px * var(--lcd-scale, 1));
-      display: flex;
-      align-items: center;
-      padding: calc(2px * var(--lcd-scale, 1)) calc(13px * var(--lcd-scale, 1));
-    }
-    .view-normal.mode-ready .screen-result {
-      flex: 1;
-      display: flex;
-      justify-content: flex-end;
-      align-items: center;
-      font-size: calc(21px * var(--lcd-scale, 1));
-      font-weight: normal;
-      text-align: right;
-      letter-spacing: 0.5px;
-      min-height: calc(22px * var(--lcd-scale, 1));
-      padding-right: 3px;
-      padding-bottom: 1px;
-    }
-
-    /* Mode: Input / Editing (Expression takes full height, result line is hidden) */
-    .view-normal.mode-input .screen-expression {
-      flex: 1;
-      min-height: 100%;
-      height: 100%;
-      display: flex;
-      align-items: center;
-      padding: calc(2px * var(--lcd-scale, 1)) calc(13px * var(--lcd-scale, 1));
-    }
-    .view-normal.mode-input .screen-result {
-      display: none !important;
-    }
-
-    /* Mode: Result (Expression compact on top, result large at bottom) */
-    .view-normal.mode-result .screen-expression {
-      flex: 0 0 auto;
-      max-height: 42%;
-      font-size: calc(13px * var(--lcd-scale, 1));
-      display: flex;
-      align-items: center;
-      padding: calc(1px * var(--lcd-scale, 1)) calc(13px * var(--lcd-scale, 1));
-    }
-    .view-normal.mode-result .screen-result {
-      flex: 1;
-      display: flex;
-      justify-content: flex-end;
-      align-items: center;
-      font-size: calc(21px * var(--lcd-scale, 1));
-      font-weight: normal;
-      text-align: right;
-      letter-spacing: 0.5px;
-      min-height: calc(22px * var(--lcd-scale, 1));
-      padding-right: 3px;
-      padding-bottom: 1px;
-    }
-
-    /* Base .screen-expression rules */
+    /* Common Expression Container - Always top-aligned! Never floating in the middle! */
     .screen-expression {
       font-size: calc(14px * var(--lcd-scale, 1));
       line-height: 1.25;
@@ -279,14 +221,70 @@
       overflow-y: auto;
       scrollbar-width: none;
       -ms-overflow-style: none;
-      min-height: calc(18px * var(--lcd-scale, 1));
       display: flex;
-      align-items: center;
+      align-items: flex-start;
       padding: calc(2px * var(--lcd-scale, 1)) calc(13px * var(--lcd-scale, 1));
       box-sizing: border-box;
       position: relative;
+      min-height: calc(20px * var(--lcd-scale, 1));
+      flex: 0 0 auto;
     }
     .screen-expression::-webkit-scrollbar { display: none; }
+
+    /* Common Result Container - Always bottom-aligned! */
+    .screen-result {
+      display: flex;
+      justify-content: flex-end;
+      align-items: flex-end;
+      font-size: calc(21px * var(--lcd-scale, 1));
+      font-weight: normal;
+      text-align: right;
+      letter-spacing: 0.5px;
+      padding-right: 3px;
+      padding-bottom: 1px;
+      box-sizing: border-box;
+    }
+
+    /* Mode: Ready / Standby (After ON or AC, initial 2-line layout) */
+    .view-normal.mode-ready .screen-expression {
+      flex: 0 0 auto;
+      min-height: calc(20px * var(--lcd-scale, 1));
+      max-height: calc(22px * var(--lcd-scale, 1));
+      align-items: flex-start;
+    }
+    .view-normal.mode-ready .screen-result {
+      flex: 1;
+      display: flex;
+      justify-content: flex-end;
+      align-items: flex-end;
+      min-height: calc(24px * var(--lcd-scale, 1));
+    }
+
+    /* Mode: Input / Editing (Top-aligned! Naturally expands downward when tall, but single line sits at top) */
+    .view-normal.mode-input .screen-expression {
+      flex: 1;
+      max-height: 100%;
+      height: auto;
+      align-items: flex-start;
+    }
+    .view-normal.mode-input .screen-result {
+      display: none !important;
+    }
+
+    /* Mode: Result (After equals: Expression compact at top WITHOUT cursor, Result prominent at bottom) */
+    .view-normal.mode-result .screen-expression {
+      flex: 0 0 auto;
+      max-height: 42%;
+      font-size: calc(13px * var(--lcd-scale, 1));
+      align-items: flex-start;
+    }
+    .view-normal.mode-result .screen-result {
+      flex: 1;
+      display: flex;
+      justify-content: flex-end;
+      align-items: flex-end;
+      min-height: calc(24px * var(--lcd-scale, 1));
+    }
 
     /* Authentic Casio ClassWiz Horizontal Scroll Arrow Indicators */
     .expr-scroll-arrow {
@@ -311,32 +309,30 @@
     .expr-scroll-right {
       right: 2px;
     }
+
+    /* Authentic Casio fx-580VN X Zero-Width Vertical Blinking Cursor (No layout shifts or horizontal jitter!) */
     .cursor {
       display: inline-block;
-      width: max(1.5px, calc(3px * var(--lcd-scale, 1)));
-      height: calc(12px * var(--lcd-scale, 1));
+      width: 0;
+      height: calc(13px * var(--lcd-scale, 1));
+      vertical-align: text-bottom;
+      position: relative;
+      margin: 0;
+      pointer-events: none;
+    }
+    .cursor::after {
+      content: '';
+      position: absolute;
+      left: -0.75px;
+      top: 0;
+      bottom: 0;
+      width: max(1.2px, calc(1.5px * var(--lcd-scale, 1)));
       background: var(--lcd-dark);
       animation: blink 1s step-end infinite;
-      vertical-align: middle;
-      margin-left: 1px;
     }
     @keyframes blink {
       0%, 100% { opacity: 1; }
       50% { opacity: 0; }
-    }
-
-    .screen-result {
-      flex: 1;
-      display: flex;
-      justify-content: flex-end;
-      align-items: center;
-      font-size: calc(21px * var(--lcd-scale, 1));
-      font-weight: normal;
-      text-align: right;
-      letter-spacing: 0.5px;
-      min-height: calc(24px * var(--lcd-scale, 1));
-      padding-right: 2px;
-      padding-bottom: 2px;
     }
     .casio-sign {
       display: inline-flex;
@@ -396,9 +392,16 @@
       border-radius: 0.5px;
     }
     .empty-box-cursor .cursor {
-      height: calc(6px * var(--lcd-scale, 1));
-      width: max(1px, calc(1.8px * var(--lcd-scale, 1)));
-      margin: 0;
+      height: calc(7px * var(--lcd-scale, 1));
+      vertical-align: middle;
+      width: 0;
+    }
+    .empty-box-cursor .cursor::after {
+      left: -0.75px;
+      width: max(1.2px, calc(1.5px * var(--lcd-scale, 1)));
+    }
+    .casio-sup .cursor {
+      height: calc(9px * var(--lcd-scale, 1));
     }
     .casio-sup .empty-box,
     .casio-sup .empty-box-cursor {
@@ -407,7 +410,11 @@
     }
     .casio-sup .empty-box-cursor .cursor {
       height: 5px;
-      width: 1.5px;
+      width: 0;
+    }
+    .casio-sup .empty-box-cursor .cursor::after {
+      left: -0.75px;
+      width: max(1px, calc(1.2px * var(--lcd-scale, 1)));
     }
 
     /* Seamless Casio Radical (Square Root & Cubic Root) */
@@ -3465,15 +3472,22 @@ class CasioDisplay {
     }
   }
 
-  renderExpression(expr, cursorPos = (expr ? expr.length : 0)) {
+  renderExpression(expr, cursorPos = (expr ? expr.length : 0), showCursor = true) {
     if (!this.exprContainer) return;
     if (expr && expr.length > 0 && this.currentMode !== 'result') {
       this.setMode('input');
     }
     if (!expr || expr.length === 0) {
-      this.exprContainer.innerHTML = '<span class="cursor"></span>';
+      this.exprContainer.innerHTML = showCursor ? '<span class="cursor"></span>' : '';
       this.exprContainer.scrollLeft = 0;
       this.exprContainer.scrollTop = 0;
+      this.updateScrollArrows();
+      return;
+    }
+
+    if (!showCursor) {
+      let html = this.formatToNaturalHtml(expr);
+      this.exprContainer.innerHTML = html;
       this.updateScrollArrows();
       return;
     }
@@ -8687,6 +8701,7 @@ class CasioApp {
 
     this.justCalculated = true;
     this.display.setMode('result');
+    this.display.renderExpression(this.expression, this.cursorPos, false);
     this.display.setResult(this.displayResult);
     this.history.push({ expr: this.expression, res: this.displayResult });
     this.historyIndex = this.history.length;
@@ -9431,7 +9446,7 @@ if (document.readyState === 'loading') {
  * Implements Zoom, Pop-up Display (Real-time Mirror), Screen Capture, and Key Logging.
  */
 
-window.CASIO_BUILD_VERSION = 'v2.5.4 (2026-09-20)';
+window.CASIO_BUILD_VERSION = 'v2.5.5 (2026-09-20)';
 
 (function() {
   class EmulatorUI {
