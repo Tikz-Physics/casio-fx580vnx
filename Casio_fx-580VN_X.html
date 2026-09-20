@@ -287,46 +287,57 @@
     }
 
     /* Authentic Casio ClassWiz Horizontal Scroll Arrow Indicators */
+    /* Authentic Casio ClassWiz Horizontal Scroll Arrow Indicators (on expression line) */
     .expr-scroll-arrow {
       display: none;
       position: absolute;
-      top: 50%;
-      transform: translateY(-50%);
-      font-size: calc(8px * var(--lcd-scale, 1));
+      top: calc(4px * var(--lcd-scale, 1));
+      height: calc(15px * var(--lcd-scale, 1));
+      align-items: center;
+      justify-content: center;
+      font-family: 'CasioClassWiz', 'KaTeX_Main', sans-serif;
+      font-size: calc(10px * var(--lcd-scale, 1));
       color: var(--lcd-dark);
       z-index: 10;
       pointer-events: none;
-      line-height: 1;
+      line-height: calc(15px * var(--lcd-scale, 1));
       opacity: 0.95;
       user-select: none;
     }
     .view-normal.mode-result .expr-scroll-arrow {
-      top: 25%;
+      top: calc(4px * var(--lcd-scale, 1));
     }
     .expr-scroll-left {
-      left: 2px;
+      left: calc(1px * var(--lcd-scale, 1));
+      padding-right: calc(3px * var(--lcd-scale, 1));
+      background: var(--lcd-bg);
     }
     .expr-scroll-right {
-      right: 2px;
+      right: calc(1px * var(--lcd-scale, 1));
+      padding-left: calc(3px * var(--lcd-scale, 1));
+      background: var(--lcd-bg);
     }
 
     /* Authentic Casio fx-580VN X Zero-Width Vertical Blinking Cursor (No layout shifts or horizontal jitter!) */
+    /* Authentic Casio fx-580VN X Zero-Width Vertical Blinking Cursor (Exact digit alignment) */
     .cursor {
       display: inline-block;
       width: 0;
-      height: calc(13px * var(--lcd-scale, 1));
-      vertical-align: text-bottom;
+      height: calc(15px * var(--lcd-scale, 1));
+      vertical-align: baseline;
+      margin-top: calc(2px * var(--lcd-scale, 1));
       position: relative;
-      margin: 0;
+      margin-left: 0;
+      margin-right: 0;
       pointer-events: none;
     }
     .cursor::after {
       content: '';
       position: absolute;
-      left: -0.75px;
+      left: -1px;
       top: 0;
       bottom: 0;
-      width: max(1.2px, calc(1.5px * var(--lcd-scale, 1)));
+      width: max(1.5px, calc(1.8px * var(--lcd-scale, 1)));
       background: var(--lcd-dark);
       animation: blink 1s step-end infinite;
     }
@@ -415,6 +426,18 @@
     .casio-sup .empty-box-cursor .cursor::after {
       left: -0.75px;
       width: max(1px, calc(1.2px * var(--lcd-scale, 1)));
+    }
+
+    
+    /* Authentic Casio Recurring Decimal (Số thập phân tuần hoàn) */
+    .casio-recurring {
+      display: inline-block;
+      letter-spacing: 0.5px;
+    }
+    .casio-recurring .empty-box,
+    .casio-recurring .empty-box-cursor {
+      width: calc(8px * var(--lcd-scale, 1));
+      height: calc(9px * var(--lcd-scale, 1));
     }
 
     /* Seamless Casio Radical (Square Root & Cubic Root) */
@@ -1938,6 +1961,7 @@ class MathEngine {
       A: 0, B: 0, C: 0, D: 0, E: 0, F: 0,
       x: 0, y: 0, z: 0, M: 0, Ans: 0, PreAns: 0
     };
+    this.undoStack = [];
     this.history = [];
     this.matrices = {
       MatA: [[1,0,0],[0,1,0],[0,0,1]],
@@ -2317,7 +2341,20 @@ class MathEngine {
 
       // Random generator functions
       sanitized = sanitized.replace(/Ran#/g, 'Ran()');
-      sanitized = sanitized.replace(/RanInt\s*\(\s*([^,]+)\s*,\s*([^)]+)\s*\)/g, 'RanInt($1, $2)');
+      sanitized = sanitized.replace(/RanInt#?\s*\(\s*([^,]+)\s*,\s*([^)]+)\s*\)/g, 'RanInt($1, $2)');
+
+    // Recurring decimals: 0.\recurring{3} -> 1/3, 1.2\recurring{3} -> 37/30
+    sanitized = sanitized.replace(/(\d+)?(?:\.(\d*))?\\recurring\{(\d+)\}/g, (_, intPart, nonRep, rep) => {
+      const I = intPart ? parseInt(intPart, 10) : 0;
+      const N = nonRep || '';
+      const R = rep || '';
+      const m = N.length;
+      const n = R.length;
+      if (n === 0) return (I + (m > 0 ? parseInt(N, 10) / Math.pow(10, m) : 0)).toString();
+      const num = (N ? parseInt(N + R, 10) - parseInt(N, 10) : parseInt(R, 10));
+      const den = Math.pow(10, m) * (Math.pow(10, n) - 1);
+      return `(${I} + (${num}/${den}))`;
+    });
 
       // Scientific constants (Official Casio fx-580VN X CODATA values)
       // 1. Universal (Đại lượng chung)
@@ -3559,10 +3596,10 @@ class CasioDisplay {
     const hasRight = container.scrollLeft + container.clientWidth < container.scrollWidth - 2;
 
     if (this.exprScrollLeft) {
-      this.exprScrollLeft.style.display = hasLeft ? 'block' : 'none';
+      this.exprScrollLeft.style.display = hasLeft ? 'flex' : 'none';
     }
     if (this.exprScrollRight) {
-      this.exprScrollRight.style.display = hasRight ? 'block' : 'none';
+      this.exprScrollRight.style.display = hasRight ? 'flex' : 'none';
     }
 
     if (this.currentView === 'NORMAL') {
@@ -3663,6 +3700,15 @@ class CasioDisplay {
     // Iteratively resolve innermost templates (supports arbitrary nesting without regex conflict)
     for (let iter = 0; iter < 50; iter++) {
       let changed = false;
+
+      // Recurring Decimal: \recurring{digits}
+      if (/\\recurring\{[^{}]*\}/.test(s)) {
+        s = s.replace(/\\recurring\{([^{}]*)\}/g, (_, digits) => {
+          const dDigits = formatSlot(digits);
+          return `<span class="casio-recurring">(${dDigits})</span>`;
+        });
+        changed = true;
+      }
 
       // Mixed Fractions: \mixedfrac{whole}{num}{den}
       if (/\\mixedfrac\{[^{}]*\}\{[^{}]*\}\{[^{}]*\}/.test(s)) {
@@ -4549,6 +4595,8 @@ class CasioApp {
         case 'int_diff': this.insert(':'); return;
         case 'x_var': this.insert('x'); return;
         case 'frac': this.insert('÷R'); return;
+        case 'sqrt': this.insertRecurring(); return;
+        case 'DEL': this.undo(); return;
         case 'neg': this.insert('A'); return;
         case 'deg': this.insert('B'); return;
         case 'recip': this.insert('C'); return;
@@ -4563,9 +4611,10 @@ class CasioApp {
         case 'div': this.insert('LCM('); return;
         case 'add': this.insert('Int('); return;
         case 'sub': this.insert('Intg('); return;
-        case '.': this.insert('RanInt('); return;
+        case '.': this.insert('RanInt#('); return;
         case 'x10x': this.insert('e'); return;
         case 'Ans': this.insert('PreAns'); return;
+        case 'EQUALS': this.calculate(true); return;
       }
     }
 
@@ -5249,6 +5298,7 @@ class CasioApp {
   }
 
   prepareForInput(isNewCalculation = true) {
+    this.saveUndoState();
     if (this.justCalculated) {
       if (isNewCalculation) {
         this.expression = '';
@@ -5275,6 +5325,43 @@ class CasioApp {
       this.expression = `${before}\\frac{}{}${after}`;
       this.cursorPos = before.length + `\\frac{`.length;
     }
+    this.display.renderExpression(this.expression, this.cursorPos);
+  }
+
+  saveUndoState() {
+    if (!this.undoStack) this.undoStack = [];
+    this.undoStack.push({ expr: this.expression, pos: this.cursorPos });
+    if (this.undoStack.length > 25) this.undoStack.shift();
+  }
+
+  undo() {
+    if (this.undoStack && this.undoStack.length > 0) {
+      const prev = this.undoStack.pop();
+      this.expression = prev.expr;
+      this.cursorPos = prev.pos;
+      if (this.justCalculated) {
+        this.justCalculated = false;
+        this.displayResult = '';
+        this.display.setResult('');
+        this.display.setMode('input');
+      }
+      this.display.renderExpression(this.expression, this.cursorPos);
+    }
+  }
+
+  insertRecurring() {
+    this.saveUndoState();
+    this.prepareForInput(true);
+    const before = this.expression.slice(0, this.cursorPos);
+    const after = this.expression.slice(this.cursorPos);
+    let prefix = '';
+    if (!before || /[+\-*\/(\s]$/.test(before)) {
+      prefix = '0.';
+    } else if (/[0-9]$/.test(before) && !/[0-9]\.[0-9]*$/.test(before)) {
+      prefix = '.';
+    }
+    this.expression = `${before}${prefix}\\recurring{}${after}`;
+    this.cursorPos = before.length + prefix.length + '\\recurring{'.length;
     this.display.renderExpression(this.expression, this.cursorPos);
   }
 
@@ -7703,6 +7790,7 @@ class CasioApp {
   }
 
   insert(token) {
+    this.saveUndoState();
     if (this.justCalculated && !['+','−','×','÷','^'].includes(token)) {
       this.expression = '';
       this.cursorPos = 0;
@@ -7749,6 +7837,19 @@ class CasioApp {
         slot: { start: openIdx + 1, end: closeIdx, text: expr.slice(openIdx + 1, closeIdx) }
       };
     };
+
+    // Recurring decimal: \recurring{digits}
+    let mRec;
+    const recRegex = /\\recurring(?=\{)/g;
+    while ((mRec = recRegex.exec(expr)) !== null) {
+      const a1 = findArg(mRec.index);
+      if (a1) {
+        slots.push({
+          type: 'recurring', fullStart: mRec.index, fullEnd: a1.close + 1,
+          digits: a1.slot
+        });
+      }
+    }
 
     // 1. Mixed fraction: \mixedfrac{whole}{num}{den}
     let m;
@@ -7998,6 +8099,8 @@ class CasioApp {
         allSlots.push({ template: t, part: 'expr', start: t.expr.start, end: t.expr.end, text: t.expr.text });
       } else if (t.type === 'pow') {
         allSlots.push({ template: t, part: 'exp', start: t.exp.start, end: t.exp.end, text: t.exp.text });
+      } else if (t.type === 'recurring') {
+        allSlots.push({ template: t, part: 'digits', start: t.digits.start, end: t.digits.end, text: t.digits.text });
       }
     }
     const leafs = [];
@@ -8318,6 +8421,7 @@ class CasioApp {
   }
 
   deleteChar() {
+    this.saveUndoState();
     if (this.cursorPos <= 0 && this.expression.length === 0) return;
 
     const templates = this.parseTemplates(this.expression);
@@ -8449,6 +8553,7 @@ class CasioApp {
           else if (t.type === 'sqrt') this.cursorPos = t.rad.end;
           else if (t.type === 'abs') this.cursorPos = t.expr.end;
           else if (t.type === 'pow') this.cursorPos = t.exp.end;
+          else if (t.type === 'recurring') this.cursorPos = t.digits.end;
           jumpedIntoTemplate = true;
           break;
         }
@@ -8457,10 +8562,11 @@ class CasioApp {
         const before = this.expression.slice(0, this.cursorPos);
         const after = this.expression.slice(this.cursorPos);
         const compoundTokens = [
+          '\\recurring{',
           '\\frac{', '^{', '\\sqrt{', '\\nthroot{', '\\mixedfrac{',
           '\\int{', '\\diff{', '\\sum{', '\\logbase{', '\\cbrt{', '\\abs{',
           'sin(', 'cos(', 'tan(', 'ln(', 'log(', 'Abs(', 'sin⁻¹(', 'cos⁻¹(', 'tan⁻¹(',
-          'Pol(', 'Rec(', 'd/dx(', '∑(', 'RanInt(', 'GCD(', 'LCM(', 'Int(', 'Intg(', 'Rnd(',
+          'Pol(', 'Rec(', 'd/dx(', '∑(', 'RanInt#(', 'RanInt(', 'GCD(', 'LCM(', 'Int(', 'Intg(', 'Rnd(',
           '10^(', 'e^(', '∛(', '×10^(',
           'e_const', 'F_const', 'N_A', 'm_p', 'm_n', 'm_e', 'm_μ', 'a_0', 'R_∞', 'r_e',
           'λ_Cp', 'λ_Cn', 'λ_C', 'γ_p', 'μ_N', 'μ_p', 'μ_n', 'μ_μ', 'V_m', 'c_1', 'c_2',
@@ -8482,6 +8588,7 @@ class CasioApp {
   }
 
   clearAll() {
+    this.saveUndoState();
     this.expression = '';
     this.cursorPos = 0;
     this.displayResult = '0';
@@ -8739,7 +8846,7 @@ class CasioApp {
     }, 600);
   }
 
-  calculate() {
+  calculate(forceApprox = false) {
     if (!this.expression.trim()) return;
 
     let balanced = this.expression;
@@ -8778,6 +8885,9 @@ class CasioApp {
           this.exactResult = decStr;
           this.displayResult = decStr;
         }
+      }
+      if (forceApprox) {
+        this.displayResult = String(Number(res.toFixed(10)));
       }
     }
 
@@ -9528,7 +9638,7 @@ if (document.readyState === 'loading') {
  * Implements Zoom, Pop-up Display (Real-time Mirror), Screen Capture, and Key Logging.
  */
 
-window.CASIO_BUILD_VERSION = 'v2.5.6 (2026-09-20)';
+window.CASIO_BUILD_VERSION = 'v2.5.7 (2026-09-20)';
 
 (function() {
   class EmulatorUI {
